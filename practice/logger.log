@@ -1,0 +1,6 @@
+prefix 3. logging.go:56: First log message.
+prefix 2026/01/11 11:18:09 3. logging.go:58: Second log message.
+prefix 2026/01/11 11:18:28 3. logging.go:57: First log message.
+prefix 2026/01/11 11:18:28 3. logging.go:58: Second log message.
+prefix 2026/01/11 11:28:27 3. logging.go:57: First log message.
+prefix 2026/01/11 11:28:27 3. logging.go:58: Second log message.
