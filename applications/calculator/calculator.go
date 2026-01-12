@@ -63,18 +63,18 @@ func main() {
 	operator := arguments[2]
 	switch operator {
 	case "+":
-		fmt.Printf("Addition of %f+%f=%f", num1, num2, num1+num2)
+		fmt.Printf("Addition of %f+%f=%f\n", num1, num2, num1+num2)
 	case "-":
-		fmt.Printf("Substraction of %f-%f=%f", num1, num2, num1-num2)
+		fmt.Printf("Substraction of %f-%f=%f\n", num1, num2, num1-num2)
 	case "*":
-		fmt.Printf("Multiplication of %f*%f=%f", num1, num2, num1*num2)
+		fmt.Printf("Multiplication of %f*%f=%f\n", num1, num2, num1*num2)
 	case "/":
 		if num2 == 0 {
 			logger.Println("Error: division by zero is not allowed")
 			fmt.Println("Error: division by zero is not allowed")
 			return
 		}
-		fmt.Printf("Division of %f/%f=%f", num1, num2, num1/num2)
+		fmt.Printf("Division of %f/%f=%f\n", num1, num2, num1/num2)
 
 	default:
 		logger.Printf("Error: invalid operator '%s'", operator)
