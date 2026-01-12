@@ -1,0 +1,47 @@
+WSL SETUP
+---------
+sudo apt update
+sudo apt install make -y
+make --version
+
+
+PROJECT STRUCTURE
+-----------------
+calculator/
+├── calculator.go
+├── Makefile
+├── logs/
+├── go.mod
+
+
+MAKEFILE
+--------
+APP=calculator
+
+run:
+	go run calculator.go
+
+build:
+	go build -o $(APP)
+
+clean:
+	rm -f $(APP)
+	rm -rf logs
+
+fmt:
+	go fmt ./...
+
+test:
+	go test ./...
+
+
+HOW TO RUN (WSL ONLY)
+--------------------
+make run
+
+make build
+./calculator 10 + 5
+
+make fmt
+make test
+make clean
