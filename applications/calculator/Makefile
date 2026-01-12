@@ -1,14 +1,16 @@
 APP=calculator
-
-run:
-	go run calculator.go
+BIN_DIR=bin
+BIN=$(BIN_DIR)/$(APP)
 
 build:
-	go build -o $(APP)
+	mkdir -p $(BIN_DIR)
+	go build -o $(BIN)
+
+run: build
+	$(BIN)
 
 clean:
-	rm -f $(APP)
-	rm -rf logs
+	rm -rf $(BIN_DIR) logs
 
 fmt:
 	go fmt ./...
