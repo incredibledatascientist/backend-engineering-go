@@ -5,6 +5,24 @@ import (
 	"time"
 )
 
+func calculateDuration() {
+	start := time.Now()
+
+	// Mimic the processing...
+	// Heavy work
+	time.Sleep(10 * time.Second)
+
+	// i := 0
+	// for {
+	// 	i += 1
+	// 	if i == 10000000000 {
+	// 		break
+	// 	}
+	// }
+
+	duration := time.Since(start)
+	fmt.Println("duration: ", duration)
+}
 func main() {
 	// t := time.Now()
 	// fmt.Println("time:", t)
@@ -42,4 +60,24 @@ func main() {
 	dateFromate := d.Format("2006-01-02")
 	fmt.Println("Format date:", dateFromate)
 	fmt.Printf("Format type: %T\n", dateFromate)
+
+	// Timezones
+	dt := time.Now()
+	local := dt.Location()
+	fmt.Println("local:", local)
+
+	timezone := "Asia/Kolkata"
+	fmt.Println("timezone:", timezone)
+
+	// timezone := "America/New_York"
+	// fmt.Println("timezone:", timezone)
+
+	// timezone := "Local"
+	// fmt.Println("timezone:", timezone)
+
+	loc, _ := time.LoadLocation(timezone) // If loc is invalid it return: UTC
+	fmt.Println("loc:", loc)
+
+	fmt.Println("--------------------")
+	calculateDuration()
 }
