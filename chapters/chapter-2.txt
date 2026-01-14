@@ -1039,6 +1039,7 @@ l]) and fmt.Println(aSlice[l-2:]).
 5 6
 The last three lines print the length and the capacity of aSlice[0:5:10],
 aSlice[2:5:10] and aSlice[:5:6].
+
 Byte slices
 A byte slice is a slice of the byte data type ([]byte). Go knows that most byte slices
 are used to store strings and so makes it easy to switch between this type and the
