@@ -43,6 +43,7 @@ func readFromCSV(filepath string) ([][]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer f.Close()
 
 	// reader := csv.NewReader(f)
 	reader, err := csv.NewReader(f).ReadAll()
@@ -59,6 +60,8 @@ func writeToCSV(filepath string) error {
 	if err != nil {
 		return err
 	}
+
+	defer f.Close()
 
 	writer := csv.NewWriter(f)
 	// writer.Comma = rune('\t')
