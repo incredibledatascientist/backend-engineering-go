@@ -1,0 +1,248 @@
+Go Packages and Functions
+The main focus of this chapter is Go packages, which are Go's way of organizing,
+delivering, and using code. The most common component of packages is functions,
+which are pretty flexible and powerful and are used for data processing and
+manipulation. Go also supports modules, which are packages with version numbers.
+This chapter will also explain the operation of defer, which is used for cleaning up
+and releasing resources.
+Regarding the visibility of package elements, Go follows a simple rule that states
+that functions, variables, data types, structure fields, and so forth that begin with an
+uppercase letter are public, whereas functions, variables, types, and so on that begin
+with a lowercase letter are private. This is the reason why fmt.Println() is named
+Println() instead of just println(). The same rule applies not only to the name of a
+struct variable but to the fields of a struct variable—in practice, this means that you
+can have a struct variable with both private and public fields. However, this rule
+does not affect package names, which are allowed to begin with either uppercase or
+lowercase letters.
+In summary, this chapter covers:
+• Go packages
+• Functions
+• Developing your own packages
+• Using GitHub to store Go packages
+• A package for working with a database
+• Modules
+
+• Creating better packages
+• Creating documentation
+• GitLab Runners and Go
+• GitHub Actions and Go
+• Versioning utilities
+Go packages
+Everything in Go is delivered in the form of packages. A Go package is a Go source
+file that begins with the package keyword, followed by the name of the package.
+Apart from the packages of the Go standard library, there are external packages that
+can be imported using their full address and that should be downloaded on the local
+machine, before their first use. One such example is https://github.com/spf13/
+cobra, which is stored in GitHub.
+Packages are mainly used for grouping related functions, variables, and constants so
+that you can transfer them easily and use them in your own Go programs. Note that
+apart from the main package, Go packages are not autonomous programs and cannot
+be compiled into executable files on their own. As a result, if you try to execute a Go
+package as if it were an autonomous program, you are going to be disappointed:
+$ go run aPackage.go
+go run: cannot run non-main package
+Instead, packages need to be called directly or indirectly from a main package in
+order to be used, as we have shown in previous chapters.
+Downloading Go packages
+In this subsection, you will learn how to download external Go packages using
+https://github.com/spf13/cobra as an example. The go get command for
+downloading the cobra package is as follows:
+$ go get github.com/spf13/cobra
+
+Note that packages can have structure. For example, the net
+package has several subdirectories, named http, mail, rpc, smtp,
+textproto, and url, which should be imported as net/http,
+net/mail, net/rpc, net/smtp, net/textproto, and net/url,
+respectively.
+
+Note that you can download the package without using https:// in its address. The
+results can be found inside the ~/go directory—the full path is ~/go/src/github.com/
+spf13/cobra. As the cobra package comes with a binary file that helps you structure
+and create command-line utilities, you can find that binary file inside ~/go/bin as
+cobra.
+The following output, which was created with the help of the tree(1) utility, shows
+a high-level view with 3 levels of detail of the structure of ~/go on my machine:
+$ tree ~/go -L 3
+/Users/mtsouk/go
+├── bin
+│ ├── cobra
+│ ├── go-outline
+│ ├── gocode
+│ ├── gocode-gomod
+│ ├── godef
+│ ├── golint
+│ ├── gopkgs
+│ └── goreturns
+├── pkg
+│ ├── darwin_amd64
+│ │ ├── github.com
+│ │ ├── golang.org
+│ │ ├── gonum.org
+│ │ └── google.golang.org
+│ ├── mod
+│ │ ├── 9fans.net
+│ │ ├── cache
+│ │ ├── cloud.google.com
+│ │ ├── github.com
+│ │ ├── go.opencensus.io@v0.22.4
+│ │ ├── golang.org
+│ │ └── google.golang.org
+│ └── sumdb
+│ └── sum.golang.org
+└── src
+ ├── github.com
+ │ ├── sirupsen
+ │ └── spf13
+ └── golang.org
+ └── x
+23 directories, 8 files
+
+Basically, there are three main directories under ~/go with the following properties:
+• The bin directory: This is where binary tools are placed.
+• The pkg directory: This is where reusable packages are put. The darwin_amd64
+directory, which can be found on macOS machines only, contains compiled
+versions of the installed packages. On a Linux machine, you can find a
+linux_amd64 directory instead of darwin_amd64.
+• The src directory: This is where the source code of the packages is located.
+The underlying structure is based on the URL of the package you are looking
+for. So, the URL for the github.com/spf13/viper package is ~/go/src/
+github.com/spf13/viper. If a package is downloaded as a module, then it
+will be located under ~/go/pkg/mod.
+If you want to upgrade an existing package, you should execute go get with the -u
+option. Additionally, if you want to see what is happening behind the scenes, add
+the -v option to the go get command—in this case, we are using the viper package
+as an example, but we abbreviate the output:
+$ go get -v github.com/spf13/viper
+github.com/spf13/viper (download)
+...
+github.com/spf13/afero (download)
+get "golang.org/x/text/transform": found meta tag get.
+metaImport{Prefix:"golang.org/x/text", VCS:"git", RepoRoot:"https://
+go.googlesource.com/text"} at //golang.org/x/text/transform?go-get=1
+get "golang.org/x/text/transform": verifying non-authoritative meta tag
+...
+github.com/fsnotify/fsnotify
+github.com/spf13/vipe
+
+Starting with Go 1.16, go install is the recommended way of
+building and installing packages in module mode. The use of
+go get is deprecated, but this chapter uses go get because it's
+commonly used online and is worth knowing about. However,
+most of the chapters in this book use go mod init and go mod
+tidy for downloading external dependencies for your own source
+files.
+
+What you can basically see in the output is the dependencies of the initial package
+being downloaded before the desired package—most of the time, you do not want
+to know that.
+We will continue this chapter by looking at the most important package element:
+
+Functions
+The main elements of packages are functions, which are the subject of this section.
+A piece of advice: functions must be as independent from each other as possible and
+must do one job (and only one job) well. So, if you find yourself writing functions
+that do multiple things, you might want to consider replacing them with multiple
+functions instead.
+You should already know that all function definitions begin with the func keyword,
+followed by the function's signature and its implementation, and that functions
+accept none, one, or more arguments and return none, one, or more values back.
+The single-most popular Go function is main(), which is used in every executable
+Go program—the main() function accepts no parameters and returns nothing, but
+it is the starting point of every Go program. Additionally, when the main() function
+ends, the entire program ends as well.
+Anonymous functions
+Anonymous functions can be defined inline without the need for a name, and they
+are usually used for implementing things that require a small amount of code. In
+Go, a function can return an anonymous function or take an anonymous function
+as one of its arguments. Additionally, anonymous functions can be attached to
+Go variables. Note that anonymous functions are called lambdas in functional
+programming terminology. Similar to that, a closure is a specific type of anonymous
+function that carries or closes over variables that are in the same lexical scope as the
+anonymous function that was defined.
+
+It is considered a good practice for anonymous functions to have a small
+implementation and a local focus. If an anonymous function does not have a local
+focus, then you might need to consider making it a regular function. When an
+anonymous function is suitable for a job, it is extremely convenient and makes your
+life easier; just do not use too many anonymous functions in your programs without
+having a good reason to. We will look at anonymous functions in action in a while.
+Functions that return multiple values
+As you already know from functions such as strconv.Atoi(), functions can return
+multiple distinct values, which saves you from having to create a dedicated structure
+for returning and receiving multiple values from a function. However, if you have
+a function that returns more than 3 values, you should reconsider that decision and
+maybe redesign it to use a single structure or slice for grouping and returning the
+desired values as a single entity—this makes handling the returned values simpler
+and easier. Functions, anonymous functions, and functions that return multiple
+values are all illustrated in functions.go, as shown in the following code:
+package main
+import "fmt"
+func doubleSquare(x int) (int, int) {
+ return x * 2, x * x
+}
+This function returns two int values, without the need for having separate variables
+to keep them—the returned values are created on the fly. Note the compulsory use of
+parentheses when a function returns more than one value.
+// Sorting from smaller to bigger value
+func sortTwo(x, y int) (int, int) {
+ if x > y {
+ return y, x
+ }
+ return x, y
+}
+The preceding function returns two int values as well.
+func main() {
+ n := 10
+ d, s := doubleSquare(n)
+ 
+ The previous statement reads the two return values of doubleSquare() and saves
+them in d and s.
+ fmt.Println("Double of", n, "is", d)
+ fmt.Println("Square of", n, "is", s)
+ // An anonymous function
+ anF := func(param int) int {
+ return param * param
+ }
+The anF variable holds an anonymous function that requires a single parameter
+as input and returns a single value. The only difference between an anonymous
+function and a regular one is that the name of the anonymous function is func() and
+that there is no func keyword.
+ fmt.Println("anF of", n, "is", anF(n))
+ fmt.Println(sortTwo(1, -3))
+ fmt.Println(sortTwo(-1, 0))
+}
+The last two statements print the return values of sortTwo(). Running functions.go
+produces the following output:
+Double of 10 is 20
+Square of 10 is 100
+anF of 10 is 100
+-3 1
+-1 0
+The subsection that follows illustrates functions that have named return values.
+The return values of a function can be named
+Unlike C, Go allows you to name the return values of a Go function. Additionally,
+when such a function has a return statement without any arguments, the function
+automatically returns the current value of each named return value, in the order in
+which they were declared in the function signature.
+The following function is included in namedReturn.go:
+func minMax(x, y int) (min, max int) {
+ if x > y {
+ 
+
+min = y
+ max = x
+ return min, max
+This return statement returns the values stored in the min and max variables—both
+min and max are defined in the function signature and not in the function body.
+ }
+ min = x
+ max = y
+ return
+}
+This return statement is equivalent to return min, max, which is based on the
+function signature and the use of named return values.
+Running namedReturn.go produces the following output:
+$ go run namedReturn.go 1 -2
+-2 1
+-2 1
+
