@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -47,18 +48,39 @@ func main() {
 	// fmt.Println("complete data read:-")
 	// fmt.Printf("%q", dataStr)
 
-	// Step 2: Manual buffered reading
+	// // Step 2: Manual buffered reading
+	// file, err := os.Open("input.log")
+	// defer file.Close()
+
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// buf := make([]byte, 10)
+	// count := 0
+	// for {
+	// 	count++
+	// 	n, err := file.Read(buf)
+	// 	if err == io.EOF {
+	// 		break
+	// 	} else if err != nil {
+	// 		panic("Err")
+	// 	}
+	// 	fmt.Print(string(buf[:n]))
+	// }
+
+	// Step 3: Buffered reading using bufio
 	file, err := os.Open("input.log")
 	defer file.Close()
 
 	if err != nil {
 		panic(err)
 	}
-	buf := make([]byte, 1024)
+	reader := bufio.NewReader(file)
+	buf := make([]byte, 10)
 	count := 0
 	for {
 		count++
-		n, err := file.Read(buf)
+		n, err := reader.Read(buf)
 		if err == io.EOF {
 			break
 		} else if err != nil {
@@ -66,8 +88,5 @@ func main() {
 		}
 		fmt.Print(string(buf[:n]))
 	}
-
-	println()
-	println("Total syscal:", count)
 	fmt.Println("------------- main end -----------")
 }
