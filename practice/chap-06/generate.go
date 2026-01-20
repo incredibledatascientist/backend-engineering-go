@@ -16,7 +16,7 @@ func main() {
 	}
 
 	defer file.Close() // Never close file before error check
-	for i := 1; i <= 100000; i++ {
+	for i := 1; i <= 10; i++ {
 		msg := fmt.Sprintf("Hello buffered Input Output - %d\n", i)
 		file.Write([]byte(msg))
 	}
