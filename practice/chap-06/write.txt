@@ -1,0 +1,2 @@
+This is writting using Write().
+This is writting using Write().
