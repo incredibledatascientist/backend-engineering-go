@@ -1,5 +1,10 @@
-server:
-    port: 5432
-    addr: google.com
 name: dev
 type: config
+storage: postres # postgres | sqlite3 | memory
+server:
+  port: 5432
+  url: google.com
+tls:
+  use_tls: false
+  cert_file: cert.pem
+  key_file: key.pem
