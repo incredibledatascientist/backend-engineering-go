@@ -15,6 +15,26 @@ type Student struct {
 
 var students []Student
 
+func PrettyPrint(v any) (err error) {
+	b, err := json.MarshalIndent(v, "", "\t")
+	if err == nil {
+		fmt.Println(string(b))
+	}
+	return err
+}
+
+// func JSONstream(data interface{}) (string, error) {
+// 	buffer := new(bytes.Buffer)
+// 	encoder := json.NewEncoder(buffer)
+// 	encoder.SetIndent("", "\t")
+
+// 	err := encoder.Encode(data)
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	return buffer.String(), nil
+// }
+
 func main() {
 	// std := Student{101, "Abhishek Kumar", "Python", "abhishek"}
 	std := Student{Name: "Abhishek", Subject: "Python", Username: "abhishek@supercloudnow.com"}
@@ -66,4 +86,6 @@ func main() {
 	// }
 	fmt.Println("------------------ Encoding/Decoding --------------------")
 	fmt.Println("students:", students)
+	PrettyPrint(students)
+	PrettyPrint(std2)
 }
