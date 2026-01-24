@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -15,7 +16,8 @@ type Student struct {
 	Subject string
 }
 
-func Consumer(ctx context.Context, ch <-chan Student) {
+func Consumer(ctx context.Context, ch <-chan Student, wg *sync.WaitGroup, done <-chan any) {
+	defer wg.Done()
 	i := 0
 	for {
 		select {
@@ -27,11 +29,25 @@ func Consumer(ctx context.Context, ch <-chan Student) {
 			i++
 			fmt.Println(i, ":- data recieved...", std)
 			time.Sleep(5 * time.Second)
+
+		case <-done:
+			// graceful shutdown with draining.
+			fmt.Println("Get done signal drain all the data from chan and exit...")
+			for std := range ch {
+				i++
+				fmt.Println(i, ":- data recieved...", std)
+			}
+			fmt.Println("All data read successfully now returning...")
+			return
 		}
 	}
 }
 
-func Generator(ctx context.Context, ch chan<- Student) {
+func Generator(ctx context.Context, ch chan<- Student, wg *sync.WaitGroup, done chan<- any) {
+	defer func() {
+		wg.Done()
+		// close(ch) // Closing a chan
+	}()
 	// for i := 0; i <= 10; i++ {
 	// 	ch <- Student{Roll: 100 + i, Name: fmt.Sprintf("Abhi-%d", i), Subject: fmt.Sprintf("Python-%d", i)}
 	// 	fmt.Printf("%d :- Sleeping for %d seconds\n", i, i)
@@ -46,6 +62,9 @@ func Generator(ctx context.Context, ch chan<- Student) {
 
 		case <-ctx.Done():
 			fmt.Println("Context is cancelled now returning...")
+
+			// send done signal
+			close(done)
 			return
 		}
 	}
@@ -55,20 +74,26 @@ func main() {
 	fmt.Println("---------- Main Start ----------")
 	inputChan := make(chan Student, 1024)
 	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan any)
+
+	var wg sync.WaitGroup
 
 	// Use as goroutine for generate data
-	go Generator(ctx, inputChan)
+	wg.Add(1)
+	go Generator(ctx, inputChan, &wg, done)
 
 	// Use as goroutine for consume data
-	go Consumer(ctx, inputChan)
+	wg.Add(1)
+	go Consumer(ctx, inputChan, &wg, done)
 
 	// Handle termination
 	sigs := make(chan os.Signal, 1)
-	fmt.Println("Waiting for the interrupt signal to exit....")
+	fmt.Println("Waiting for the interrupt signal ....")
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	<-sigs
 
 	cancel()
-	time.Sleep(5 * time.Second)
+	fmt.Println("Waiting for the goroutine to return....")
+	wg.Wait()
 	fmt.Println("---------- Main End ----------")
 }
