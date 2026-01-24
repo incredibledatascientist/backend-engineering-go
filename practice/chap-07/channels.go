@@ -16,37 +16,21 @@ type Student struct {
 	Subject string
 }
 
-func Consumer(ctx context.Context, ch <-chan Student, wg *sync.WaitGroup, done <-chan any) {
+func Consumer(ctx context.Context, ch <-chan Student, wg *sync.WaitGroup) {
 	defer wg.Done()
 	i := 0
-	for {
-		select {
-		case std, ok := <-ch:
-			if !ok {
-				fmt.Println("Error while reading, returning...")
-				return
-			}
-			i++
-			fmt.Println(i, ":- data recieved...", std)
-			time.Sleep(5 * time.Second)
-
-		case <-done:
-			// graceful shutdown with draining.
-			fmt.Println("Get done signal drain all the data from chan and exit...")
-			for std := range ch {
-				i++
-				fmt.Println(i, ":- data recieved...", std)
-			}
-			fmt.Println("All data read successfully now returning...")
-			return
-		}
+	for std := range ch {
+		i++
+		fmt.Println(i, ":- data recieved...", std)
+		time.Sleep(5 * time.Second)
 	}
+	fmt.Println("All data read successfully now returning...")
 }
 
-func Generator(ctx context.Context, ch chan<- Student, wg *sync.WaitGroup, done chan<- any) {
+func Generator(ctx context.Context, ch chan<- Student, wg *sync.WaitGroup) {
 	defer func() {
 		wg.Done()
-		// close(ch) // Closing a chan
+		close(ch) // Closing a chan
 	}()
 	// for i := 0; i <= 10; i++ {
 	// 	ch <- Student{Roll: 100 + i, Name: fmt.Sprintf("Abhi-%d", i), Subject: fmt.Sprintf("Python-%d", i)}
@@ -62,9 +46,6 @@ func Generator(ctx context.Context, ch chan<- Student, wg *sync.WaitGroup, done 
 
 		case <-ctx.Done():
 			fmt.Println("Context is cancelled now returning...")
-
-			// send done signal
-			close(done)
 			return
 		}
 	}
@@ -74,17 +55,16 @@ func main() {
 	fmt.Println("---------- Main Start ----------")
 	inputChan := make(chan Student, 1024)
 	ctx, cancel := context.WithCancel(context.Background())
-	done := make(chan any)
 
 	var wg sync.WaitGroup
 
 	// Use as goroutine for generate data
 	wg.Add(1)
-	go Generator(ctx, inputChan, &wg, done)
+	go Generator(ctx, inputChan, &wg)
 
 	// Use as goroutine for consume data
 	wg.Add(1)
-	go Consumer(ctx, inputChan, &wg, done)
+	go Consumer(ctx, inputChan, &wg)
 
 	// Handle termination
 	sigs := make(chan os.Signal, 1)
