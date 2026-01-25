@@ -36,8 +36,13 @@ func main() {
 	mux := http.NewServeMux()
 
 	// Custom Server End points
-	mux.HandleFunc("/greet", greeting)
-	mux.HandleFunc("/hello", handler)
+	// Simple and basic HandleFunc() -> accepts normal function
+	// mux.HandleFunc("/greet", greeting)
+	// mux.HandleFunc("/hello", handler)
+
+	// Production grade more control
+	mux.Handle("/greet", http.HandlerFunc(greeting))
+	mux.Handle("/hello", http.HandlerFunc(handler))
 
 	// pprof routes (explicit)
 	mux.HandleFunc("/debug/pprof/", pprof.Index)
