@@ -1,9 +1,12 @@
-package test
+package main
 
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -13,51 +16,117 @@ type Student struct {
 	Subject string
 }
 
-func Producer(ctx context.Context, ch chan<- Student, wg *sync.WaitGroup) {
-	defer wg.Done()
-	for i := 0; i <= 10; i++ {
-		ch <- Student{Roll: 100 + i, Name: fmt.Sprintf("Abhi-%d", i), Subject: fmt.Sprintf("Python-%d", i)}
-		fmt.Printf("Sleeping for %d seconds\n", i)
-		time.Sleep(time.Duration(i) * time.Second)
-	}
+type Pipeline struct {
+	Name    string
+	inpChan chan Student
+	proChan chan Student
+
+	ctx    context.Context
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
 }
 
-func Consumer(ctx context.Context, ch <-chan Student) {
+/* ---------------- Consumer ---------------- */
+func (p *Pipeline) Consumer() {
+	defer func() {
+		p.wg.Done()
+		close(p.proChan) // Close input channel [Consumer is the owner]
+	}()
+
+	i := 0
+	for std := range p.inpChan {
+		i++
+		fmt.Println(i, ":- data recieved...", std)
+		p.proChan <- std
+		time.Sleep(2 * time.Second)
+	}
+	fmt.Println("All data read successfully now returning...")
+}
+
+/* ---------------- Consumer ---------------- */
+func (p *Pipeline) Processor() {
+	defer p.wg.Done()
+
+	i := 0
+	for std := range p.proChan {
+		i++
+		fmt.Println(i, ":- data processing...", std)
+		time.Sleep(5 * time.Second)
+	}
+	fmt.Println("All data proccessed successfuly...")
+}
+
+/* ---------------- Generator ---------------- */
+func (p *Pipeline) Generator() {
+	defer func() {
+		p.wg.Done()
+		close(p.inpChan) // Close input channel only on Generator
+	}()
+
+	i := 0
 	for {
 		select {
-		case <-ctx.Done():
-			fmt.Println("consumer stopped:", ctx.Err())
-			return
+		case p.inpChan <- Student{Roll: 100 + i, Name: fmt.Sprintf("Abhi-%d", i), Subject: fmt.Sprintf("Python-%d", i)}:
+			i++
+			fmt.Printf("%d :- data sent\n", i)
+			time.Sleep(100 * time.Millisecond)
 
-		case std, ok := <-ch:
-			if !ok {
-				fmt.Println("channel closed, consumer exiting")
-				return
-			}
-			fmt.Println("student:", std)
+		case <-p.ctx.Done():
+			fmt.Println("Context is cancelled now returning...")
+			return
 		}
 	}
 }
 
-func main() {
-	fmt.Println("---------- Main Start ----------")
-	// Read write will be blocked for unbuffered channel
-	// channel := make(chan Student) // channel with size 0
-	var wg sync.WaitGroup
+/* ---------------- Lifecycle ---------------- */
+func NewPipeline(name string) *Pipeline {
 	ctx, cancel := context.WithCancel(context.Background())
+	inpChan := make(chan Student, 1024)
+	proChan := make(chan Student, 1024)
 
-	// Buffered channels are unblocking.
-	channel := make(chan Student, 1)
+	return &Pipeline{
+		Name:    name,
+		inpChan: inpChan,
+		proChan: proChan,
+		ctx:     ctx,
+		cancel:  cancel,
+	}
+}
 
-	wg.Add(1)
-	go Producer(ctx, channel, &wg)
+func (p *Pipeline) Start() {
+	fmt.Println("Start called...")
+	p.wg.Add(3)
+	go p.Consumer()
+	go p.Processor()
 
-	go Consumer(ctx, channel)
+	go p.Generator()
+}
 
-	fmt.Println("Waiting for all data producing...")
-	wg.Wait()
-	//
-	sigs := make(chan bool)
-	cancel()
+func (p *Pipeline) Stop() {
+	fmt.Println("Stop called...")
+	p.cancel()
+	p.wg.Wait()
+}
+
+func main() {
+	// Stoping process in windows
+	// tasklist|findstr go.exe
+	// taskkill /pid 22960 /F
+
+	fmt.Println("---------- Main Start ----------")
+	pipeline := NewPipeline("Master Pipeline")
+
+	// Start the pipeline
+	pipeline.Start()
+
+	// Handle termination
+	sigs := make(chan os.Signal, 1)
+	fmt.Println("Waiting for interrupt...")
+
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	<-sigs
+
+	fmt.Println("Stopping pipeline...")
+	pipeline.Stop()
 	fmt.Println("---------- Main End ----------")
 }
