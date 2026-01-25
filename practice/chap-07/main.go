@@ -38,7 +38,7 @@ func (p *Pipeline) Consumer() {
 		i++
 		fmt.Println(i, ":- data recieved...", std)
 		p.proChan <- std
-		time.Sleep(2 * time.Second)
+		// time.Sleep(2 * time.Second)
 	}
 	fmt.Println("All data read successfully now returning...")
 }
@@ -51,7 +51,7 @@ func (p *Pipeline) Processor() {
 	for std := range p.proChan {
 		i++
 		fmt.Println(i, ":- data processing...", std)
-		time.Sleep(5 * time.Second)
+		time.Sleep(20 * time.Second)
 	}
 	fmt.Println("All data proccessed successfuly...")
 }
@@ -69,7 +69,7 @@ func (p *Pipeline) Generator() {
 		case p.inpChan <- Student{Roll: 100 + i, Name: fmt.Sprintf("Abhi-%d", i), Subject: fmt.Sprintf("Python-%d", i)}:
 			i++
 			fmt.Printf("%d :- data sent\n", i)
-			time.Sleep(100 * time.Millisecond)
+			// time.Sleep(100 * time.Millisecond)
 
 		case <-p.ctx.Done():
 			fmt.Println("Context is cancelled now returning...")
@@ -81,8 +81,8 @@ func (p *Pipeline) Generator() {
 /* ---------------- Lifecycle ---------------- */
 func NewPipeline(name string) *Pipeline {
 	ctx, cancel := context.WithCancel(context.Background())
-	inpChan := make(chan Student, 1024)
-	proChan := make(chan Student, 1024)
+	inpChan := make(chan Student, 2)
+	proChan := make(chan Student, 2)
 
 	return &Pipeline{
 		Name:    name,
