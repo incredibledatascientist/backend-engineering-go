@@ -1,0 +1,2228 @@
+Working with REST APIs
+The subject of this chapter is the development and use of simple RESTful servers
+and clients using the Go programming language. REST is an acronym for
+REpresentational State Transfer and is primarily an architecture for designing
+web services. Although web services exchange information in HTML, RESTful
+services usually use JSON format, which is well supported by Go. REST is not tied
+to any operating system or system architecture and is not a protocol; however,
+to implement a RESTful service, you need to use a protocol such as HTTP. When
+developing RESTful servers, you need to create the appropriate Go structures and
+perform the necessary marshaling and unmarshaling operations for the exchange
+of JSON data.
+This truly important and practical chapter covers:
+• An introduction to REST
+• Developing RESTful servers and clients
+• Creating a functional RESTful server
+• Creating a RESTful client
+• Uploading and downloading binary files
+• Using Swagger for REST API documentation
+
+An introduction to REST
+Most modern web applications work by exposing their APIs and allowing clients to
+use these APIs to interact and communicate with them. Although REST is not tied
+to HTTP, most web services use HTTP as their underlying protocol. Additionally,
+although REST can work with any data format, usually REST means JSON over HTTP
+because most of the time, data is exchanged in JSON format in RESTful services.
+There are also times where data is exchanged in plain text format, usually when the
+exchanged data is simple and there is no need for using JSON records. Due to the
+way a RESTful service works, it should have an architecture that follows the next
+principles:
+• Client-server design
+• Stateless implementation—this means that each interaction does not depend
+on others
+• Cacheable
+• Uniform interface
+• Layered system
+According to the HTTP protocol, you can perform the following operations on an
+HTTP server:
+• POST, which is used for creating new resources.
+• GET, which is used for reading (getting) existing resources.
+• PUT, which is used for updating existing resources. As a convention, a PUT
+request should contain the full and updated version of an existing resource.
+• DELETE, which is used for deleting existing resources.
+• PATCH, which is used for updating existing resources. A PATCH request only
+contains the modifications to an existing resource.
+The important thing here is that everything you do, especially when it is out of the
+ordinary, must be well documented. As a reference, have in mind that the HTTP
+methods supported by Go are defined as constants in the net/http package:
+const (
+ MethodGet = "GET"
+ MethodHead = "HEAD"
+ MethodPost = "POST"
+ MethodPut = "PUT"
+ MethodPatch = "PATCH" // RFC 5789
+ 
+ MethodDelete = "DELETE"
+ MethodConnect = "CONNECT"
+ MethodOptions = "OPTIONS"
+ MethodTrace = "TRACE"
+)
+There also exist conventions regarding the returning HTTP status code of each
+client request. The most popular HTTP status codes as well as their meanings are
+the following:
+• 200 means that everything went well, and the specified action was executed
+successfully.
+• 201 means that the desired resource was created.
+• 202 means that the request was accepted and is currently being processed.
+This is usually used when an action takes too much time to complete.
+• 301 means that the requested resource has been moved permanently—the
+new URI should be part of the response. This is rarely used in RESTful
+services because usually you use API versioning.
+• 400 means that there was a bad request and that you should change your
+initial request before sending it again.
+• 401 means that the client tried to access a protected request without
+authorization.
+• 403 means that the client does not have the required permissions for
+accessing a resource even though the client is properly authorized. In UNIX
+terminology, 403 means that the user does not have the required privileges
+to perform an action.
+• 404 means that the resource was not found.
+• 405 means that the client used a method that is not allowed by the type of
+resource.
+• 500 means internal server error—it probably indicates a server failure.
+If you want to learn more about the HTTP protocol, you should visit RFC 7231 at
+https://datatracker.ietf.org/doc/html/rfc7231.
+As I am writing this chapter, I am developing a small RESTful client for a project I
+am working on. The client connects to a given server and gets a list of usernames.
+For each username, I must get a list of login and logout times by hitting another
+endpoint.
+
+What I can tell you from my experience is that most of the code is not about
+interacting with the RESTful server but about taking care of the data, transforming it
+to the desired format, and storing it in a MySQL database—the two most tricky tasks
+that I needed to perform were getting a date and time in UNIX epoch format and
+truncating the information about the minutes and seconds from that epoch time, as
+well as inserting a new record into a database table after making sure that the record
+was not already stored in that database. So, expect the logic of the program to be
+responsible for most of the code, which is true not only for RESTful services but for
+all services.
+The first section of this chapter contains general yet essential information about
+programming RESTful servers and clients.
+Developing RESTful servers and clients
+This section is going to develop a RESTful server and a client for that server using
+the functionality of the Go standard library to understand how things really work
+behind the scenes. The functionality of the server is described in the following list of
+endpoints:
+• /add: This endpoint is for adding new entries to the server
+• /delete: This endpoint is used for deleting an existing entry
+• /get: This endpoint is for getting information about an entry that already
+exists
+• /time: This endpoint returns the current date and time and is mainly used
+for testing the operation of the RESTful server
+• /: This endpoint is used for serving any request that is not a match to any
+other endpoint
+This is my preferred way of structuring the RESTful service. An alternative way of
+defining the endpoints would be the following:
+• /users/ with the GET method: Get a list of all users
+• /users/:id with the GET method: Get information about the user with the
+given ID value
+• /users/:id with the DELETE method: Delete the user with the given ID
+• /users/ with the POST method: Create a new user
+• /users/:id with either the PATCH or the PUT method: Update the user with
+the given ID value
+
+The implementation of the alternative way is left as an exercise for the reader—it
+should not be that difficult to implement it given that the Go code for the handlers
+is going to be the same and you only have to redefine the part where we specify the
+handling of the endpoints. The next subsection presents the implementation of the
+RESTful server.
+A RESTful server
+The purpose of the presented implementation is to understand how things work
+behind the scenes because the principles behind REST services remain the same. The
+logic behind each handler function is simple: read user input and decide whether
+the given input and HTTP method are the desired ones. The principles of each client
+interaction are also simple: the server should send appropriate error messages and
+HTTP codes back to the client so that everyone knows what really happened. Lastly,
+everything should be documented to communicate in a common language.
+The code of the server, which is saved as rServer.go, is the following:
+package main
+import (
+ "encoding/json"
+ "fmt"
+ "io"
+ "log"
+ "net/http"
+ "os"
+ "time"
+)
+type User struct {
+ Username string `json:"user"`
+ Password string `json:"password"`
+}
+This is a structure that holds user data. The use of JSON tags is crucial.
+var user User
+This global variable holds user data—this is the input for the /add, /get, and /delete
+endpoints and their simplistic implementations. As this global variable is shared by
+the entire program, our code is not concurrently safe, which is fine for a RESTful
+server used as a proof of concept. 
+
+The real-world RESTful server that is implemented in the Creating a functional
+RESTful server section is going to be concurrently safe.
+// PORT is where the web server listens to
+var PORT = ":1234"
+A RESTful server is just an HTTP server, so we define the TCP port number the
+server listens to.
+// DATA is the map that holds User records
+var DATA = make(map[string]string)
+The preceding is another global variable that contains the data of the service.
+func defaultHandler(w http.ResponseWriter, r *http.Request) {
+ log.Println("Serving:", r.URL.Path, "from", r.Host)
+ w.WriteHeader(http.StatusNotFound)
+ Body := "Thanks for visiting!\n"
+ fmt.Fprintf(w, "%s", Body)
+}
+This is the default handler. On a production server, the default handler might
+print instructions about the operation of the server as well as the list of available
+endpoints.
+func timeHandler(w http.ResponseWriter, r *http.Request) {
+ log.Println("Serving:", r.URL.Path, "from", r.Host)
+ t := time.Now().Format(time.RFC1123)
+ Body := "The current time is: " + t + "\n"
+ fmt.Fprintf(w, "%s", Body)
+}
+This is another simple handler that returns the current date and time—such simple
+handlers are usually used for testing the health of the server and are usually
+removed in the production version.
+func addHandler(w http.ResponseWriter, r *http.Request) {
+ log.Println("Serving:", r.URL.Path, "from", r.Host, r.Method)
+ if r.Method != http.MethodPost {
+ http.Error(w, "Error:", http.StatusMethodNotAllowed)
+ fmt.Fprintf(w, "%s\n", "Method not allowed!")
+ return
+ }
+ 
+ This is the first time that you are seeing the http.Error() function. The http.Error()
+function sends a reply to the client request that includes the specified error message,
+which should be in plain text, as well as the desired HTTP code. However, you still
+need to write the data you want to send back to the client using an fmt.Fprintf()
+statement.
+ d, err := io.ReadAll(r.Body)
+ if err != nil {
+ http.Error(w, "Error:", http.StatusBadRequest)
+ return
+ }
+We try to read all data from the client at once using io.ReadAll() and we make sure
+that we read the data without any errors by checking the value of the error variable
+returned by io.ReadAll(r.Body).
+ err = json.Unmarshal(d, &user)
+ if err != nil {
+ log.Println(err)
+ http.Error(w, "Error:", http.StatusBadRequest)
+ return
+ }
+After reading the data from the client, we put it into the user global variable. Where
+you want to store the data and what to do with it is decided by the server. There is
+no rule on how to interpret the data. However, the client should communicate with
+the server according to the wishes of the server.
+ if user.Username != "" {
+ DATA[user.Username] = user.Password
+ log.Println(DATA)
+ w.WriteHeader(http.StatusOK)
+If the given Username field is not empty, add the new structure to the DATA map. Data
+persistence is not implemented—each time you restart the RESTful server, DATA is
+initialized from scratch.
+ } else {
+ http.Error(w, "Error:", http.StatusBadRequest)
+ return
+ }
+}
+
+If the value of the username field is empty, then we cannot add it to the DATA map
+and the operation fails with an http.StatusBadRequest code.
+func getHandler(w http.ResponseWriter, r *http.Request) {
+ log.Println("Serving:", r.URL.Path, "from", r.Host, r.Method)
+ if r.Method != http.MethodGet {
+ http.Error(w, "Error:", http.StatusMethodNotAllowed)
+ fmt.Fprintf(w, "%s\n", "Method not allowed!")
+ return
+ }
+For the /get endpoint we need to use http.MethodGet, so we have to make sure that
+this condition is met (if r.Method != http.MethodGet).
+ d, err := io.ReadAll(r.Body)
+ if err != nil {
+ http.Error(w, "ReadAll - Error", http.StatusBadRequest)
+ return
+ }
+Again, we need to make sure that we can read the data from the client request
+without issues.
+ err = json.Unmarshal(d, &user)
+ if err != nil {
+ log.Println(err)
+ http.Error(w, "Unmarshal - Error", http.StatusBadRequest)
+ return
+ }
+ fmt.Println(user)
+Then, we use the client data and put it into a User structure (the user global variable).
+ _, ok := DATA[user.Username]
+ if ok && user.Username != "" {
+ log.Println("Found!")
+ w.WriteHeader(http.StatusOK)
+ fmt.Fprintf(w, "%s\n", d)
+If the desired user record is found, we send it back to the client using the data stored
+in the d variable—remember that d was initialized in the io.ReadAll(r.Body) call
+and already contains a JSON record that is marshaled.
+
+} else {
+ log.Println("Not found!")
+ w.WriteHeader(http.StatusNotFound)
+ http.Error(w, "Map - Resource not found!", http.StatusNotFound)
+ }
+ return
+}
+Otherwise, we inform the client that the desired record was not found.
+func deleteHandler(w http.ResponseWriter, r *http.Request) {
+ log.Println("Serving:", r.URL.Path, "from", r.Host, r.Method)
+ if r.Method != http.MethodDelete {
+ http.Error(w, "Error:", http.StatusMethodNotAllowed)
+ fmt.Fprintf(w, "%s\n", "Method not allowed!")
+ return
+ }
+The DELETE HTTP method looks like a rational choice when deleting a resource,
+hence the r.Method != http.MethodDelete test.
+ d, err := io.ReadAll(r.Body)
+ if err != nil {
+ http.Error(w, "ReadAll - Error", http.StatusBadRequest)
+ return
+ }
+Again, we read the client input and store it in the d variable.
+ err = json.Unmarshal(d, &user)
+ if err != nil {
+ log.Println(err)
+ http.Error(w, "Unmarshal - Error", http.StatusBadRequest)
+ return
+ }
+ log.Println(user)
+It is considered a good practice to keep additional logging information when
+deleting resources.
+ _, ok := DATA[user.Username]
+ if ok && user.Username != "" {
+ if user.Password == DATA[user.Username] {
+ 
+ For the delete process, we make sure that both the given username and password
+values are the same as the ones that exist in the DATA map before deleting the relevant
+entry.
+ delete(DATA, user.Username)
+ w.WriteHeader(http.StatusOK)
+ fmt.Fprintf(w, "%s\n", d)
+ log.Println(DATA)
+ }
+ } else {
+ log.Println("User", user.Username, "Not found!")
+ w.WriteHeader(http.StatusNotFound)
+ http.Error(w, "Delete - Resource not found!", http.
+StatusNotFound)
+ }
+ log.Println("After:", DATA)
+After the deletion process, we print the contents of the DATA map to make sure that
+everything went as expected—you usually do not do that on a production server.
+ return
+}
+func main() {
+ arguments := os.Args
+ if len(arguments) != 1 {
+ PORT = ":" + arguments[1]
+ }
+The previous code presents a technique for defining the TCP port number of a
+web server while having a default value at hand. So, if there are no command-line
+arguments, the default value is used. Otherwise, the value given as a command-line
+argument is used.
+ mux := http.NewServeMux()
+ s := &http.Server{
+ Addr: PORT,
+ Handler: mux,
+ IdleTimeout: 10 * time.Second,
+ ReadTimeout: time.Second,
+ WriteTimeout: time.Second,
+ }
+ 
+ Above are the details and the options for the web server.
+ mux.Handle("/time", http.HandlerFunc(timeHandler))
+ mux.Handle("/add", http.HandlerFunc(addHandler))
+ mux.Handle("/get", http.HandlerFunc(getHandler))
+ mux.Handle("/delete", http.HandlerFunc(deleteHandler))
+ mux.Handle("/", http.HandlerFunc(defaultHandler))
+The previous code defines the endpoints of the web server—nothing special here as
+a RESTful server implements an HTTP server behind the scenes.
+ fmt.Println("Ready to serve at", PORT)
+ err := s.ListenAndServe()
+ if err != nil {
+ fmt.Println(err)
+ return
+ }
+}
+The last step is about running the web server with the predefined options, which is
+common practice. After that, we test the RESTful server using the curl(1) utility,
+which is very handy when you do not have a client and you want to test the
+operation of a RESTful server—the good thing is that curl(1) can send and receive
+JSON data.
+$ curl localhost:1234/
+Thanks for visiting!
+The first interaction with the RESTful server is for making sure that the server works
+as expected. The next interaction is for adding a new user to the server—the details
+of the user are in the {"user": "mtsouk", "password" : "admin"} JSON record:
+$ curl -H 'Content-Type: application/json' -d '{"user": "mtsouk",
+"password" : "admin"}' http://localhost:1234/add -v
+* Trying ::1...
+* TCP_NODELAY set
+* Connected to localhost (::1) port 1234 (#0)
+The previous output shows that curl(1) has successfully connected to the server
+(localhost) using the desired TCP port (1234).
+> POST /add HTTP/1.1
+> Host: localhost:1234
+> User-Agent: curl/7.64.1
+
+Working with REST APIs
+[ 488 ]
+> Accept: */*
+> Content-Type: application/json
+> Content-Length: 40
+The previous output shows that curl(1) is going to send data using the POST method
+and the length of the data is 40 bytes.
+>
+* upload completely sent off: 40 out of 40 bytes
+< HTTP/1.1 200 OK
+< Date: Tue, 27 Apr 2021 09:41:38 GMT
+< Content-Length: 0
+The previous output tells us that the data was sent and that the body of the server
+response is 0 bytes.
+<
+* Connection #0 to host localhost left intact
+* Closing connection 0
+The last part of the output tells us that after sending the data to the server, the
+connection was closed.
+If we try to add the same user, the RESTful server is not going to complain:
+$ curl -H 'Content-Type: application/json' -d '{"user": "mtsouk",
+"password" : "admin"}' http://localhost:1234/add
+Although this behavior might not be perfect, it is good if it is documented. This is not
+allowed on a production server, but it is acceptable when experimenting.
+$ curl -H 'Content-Type: application/json' -d '{"user": "mihalis",
+"password" : "admin"}' http://localhost:1234/add
+With the preceding command, we add another user as specified by {"user":
+"mihalis", "password" : "admin"
+
+$ curl -H -d '{"user": "admin"}' http://localhost:1234/add
+curl: (3) URL using bad/illegal format or missing URL
+Error:
+Method not allowed!
+The previous output shows an erroneous interaction where -H is not followed by a
+value. Although the request is sent to the server, it is rejected because /add does not
+use the default HTTP method.
+$ curl -H 'Content-Type: application/json' -d '{"user": "admin",
+"password" : "admin"}' http://localhost:1234/get
+Error:
+Method not allowed!
+This time, the curl command is correct, but the HTTP method used is not set
+correctly. Therefore, the request is not served.
+$ curl -X GET -H 'Content-Type: application/json' -d '{"user": "admin",
+"password" : "admin"}' http://localhost:1234/get
+Map - Resource not found!
+$ curl -X GET -H 'Content-Type: application/json' -d '{"user":
+"mtsouk", "password" : "admin"}' http://localhost:1234/get
+{"user": "mtsouk", "password" : "admin"}
+The previous two interactions use /get to get information about an existing user.
+However, only the second user is found.
+$ curl -H 'Content-Type: application/json' -d '{"user": "mtsouk",
+"password" : "admin"}' http://localhost:1234/delete -X DELETE
+{"user": "mtsouk", "password" : "admin"}
+The last interaction successfully deletes the user specified by {"user": "mtsouk",
+"password" : "admin"}.
+The output generated by the server process for all previous interactions would look
+like the following:
+$ go run rServer.go
+Ready to serve at :1234
+2021/04/27 12:41:31 Serving: / from localhost:1234
+2021/04/27 12:41:38 Serving: /add from localhost:1234 POST
+2021/04/27 12:41:38 map[mtsouk:admin]
+2021/04/27 12:41:41 Serving: /add from localhost:1234 POST
+2021/04/27 12:41:41 map[mtsouk:admin]
+
+2021/04/27 12:41:58 Serving: /add from localhost:1234 POST
+2021/04/27 12:41:58 map[mihalis:admin mtsouk:admin]
+2021/04/27 12:43:02 Serving: /add from localhost:1234 GET
+2021/04/27 12:43:13 Serving: /get from localhost:1234 POST
+2021/04/27 12:43:30 Serving: /get from localhost:1234 GET
+{admin admin}
+2021/04/27 12:43:30 Not found!
+2021/04/27 12:43:30 http: superfluous response.WriteHeader call from
+main.getHandler (rServer.go:101)
+2021/04/27 12:43:41 Serving: /get from localhost:1234 GET
+{mtsouk admin}
+2021/04/27 12:43:41 Found!
+2021/04/27 12:44:00 Serving: /delete from localhost:1234 DELETE
+2021/04/27 12:44:00 {mtsouk admin}
+2021/04/27 12:44:00 map[mihalis:admin]
+2021/04/27 12:44:00 After: map[mihalis:admin]
+So far, we have a working RESTful server that has been tested with the help of the
+curl(1) utility. The next section is about developing a command-line client for the
+RESTful server.
+A RESTful client
+This subsection illustrates the development of a client for the RESTful server
+developed previously. However, in this case, the client acts as a testing program
+that tries the capabilities of the RESTful server—later in this chapter, you are going
+to learn how to write proper clients using cobra. So, the code of the client, which
+can be found in rClient.go, is as follows:
+package main
+import (
+ "bytes"
+ "encoding/json"
+ "fmt"
+ "io"
+ "net/http"
+ "os"
+ "time"
+)
+type User struct {
+
+Username string `json:"user"`
+ Password string `json:"password"`
+}
+This same structure is found in the server implementation and is used for
+exchanging data.
+var u1 = User{"admin", "admin"}
+var u2 = User{"tsoukalos", "pass"}
+var u3 = User{"", "pass"}
+Here, we predefine three User variables that are going to be used during testing.
+const addEndPoint = "/add"
+const getEndPoint = "/get"
+const deleteEndPoint = "/delete"
+const timeEndPoint = "/time"
+The previous constants define the endpoints that are going to be used.
+func deleteEndpoint(server string, user User) int {
+ userMarshall, _ := json.Marshal(user)
+ u := bytes.NewReader(userMarshall)
+ req, err := http.NewRequest("DELETE", server+deleteEndPoint, u)
+We prepare a request that is going to access /delete using the DELETE HTTP method.
+ if err != nil {
+ fmt.Println("Error in req: ", err)
+ return http.StatusInternalServerError
+ }
+ req.Header.Set("Content-Type", "application/json")
+This is the correct way to specify that we want to use JSON data when interacting
+with the server.
+ c := &http.Client{
+ Timeout: 15 * time.Second,
+ }
+ resp, err := c.Do(req)
+ defer resp.Body.Close()
+ 
+ Then, we send the request and wait for the server response using the Do() method
+with a 15-second timeout.
+ if err != nil {
+ fmt.Println("Error:", err)
+ }
+ if resp == nil {
+ return http.StatusNotFound
+ }
+ data, err := io.ReadAll(resp.Body)
+ fmt.Print("/delete returned: ", string(data))
+The reason for putting that fmt.Print() here is that we want to know the server
+response even if there is an error in the interaction.
+ if err != nil {
+ fmt.Println("Error:", err)
+ }
+ return resp.StatusCode
+}
+The resp.StatusCode value specifies the result from the /delete endpoint.
+func getEndpoint(server string, user User) int {
+ userMarshall, _ := json.Marshal(user)
+ u := bytes.NewReader(userMarshall)
+ req, err := http.NewRequest("GET", server+getEndPoint, u)
+We are going to access /get using the GET HTTP method.
+ if err != nil {
+ fmt.Println("Error in req: ", err)
+ return http.StatusInternalServerError
+ }
+ req.Header.Set("Content-Type", "application/json")
+We specify that we are going to interact with the server using the JSON format using
+Header.Set().
+ c := &http.Client{
+ Timeout: 15 * time.Second,
+ }
+ 
+ We define a timeout period for the HTTP client in case the server is too busy
+responding.
+ resp, err := c.Do(req)
+ defer resp.Body.Close()
+ if err != nil {
+ fmt.Println("Error:", err)
+ }
+ if resp == nil {
+ return http.StatusNotFound
+ }
+The previous code sends the client request to the server using c.Do(req) and saves
+the server response in resp and the error value in err. If the value of resp is nil,
+then the server response was empty, which is an error condition.
+ data, err := io.ReadAll(resp.Body)
+ fmt.Print("/get returned: ", string(data))
+ if err != nil {
+ fmt.Println("Error:", err)
+ }
+ return resp.StatusCode
+}
+The value of resp.StatusCode, which is specified and transferred by the RESTful
+server, determines if the interaction was successful in an HTTP sense (logically) or
+not.
+func addEndpoint(server string, user User) int {
+ userMarshall, _ := json.Marshal(user)
+ u := bytes.NewReader(userMarshall)
+ req, err := http.NewRequest("POST", server+addEndPoint, u)
+We are going to access /add using the POST HTTP method. You can use http.
+MethodPost instead of POST. As stated earlier in this chapter, there exist relevant
+global variables in http for the remaining HTTP methods (http.MethodGet, http.
+MethodDelete, http.MethodPut, etc.) and it is recommended that you use them
+because this is the portable way.
+ if err != nil {
+ fmt.Println("Error in req: ", err)
+ 
+ return http.StatusInternalServerError
+ }
+ req.Header.Set("Content-Type", "application/json")
+As before, we specify that we are going to interact with the server using the JSON
+format.
+ c := &http.Client{
+ Timeout: 15 * time.Second,
+ }
+Once again, we define a timeout period for the client in case the server is too busy
+responding.
+ resp, err := c.Do(req)
+ defer resp.Body.Close()
+ if resp == nil || (resp.StatusCode == http.StatusNotFound) {
+ return resp.StatusCode
+ }
+ return resp.StatusCode
+}
+The addEndpoint() function is for testing the /add endpoint using the POST method
+and the /add endpoint.
+func timeEndpoint(server string) (int, string) {
+ req, err := http.NewRequest("POST", server+timeEndPoint, nil)
+We are going to access the /time endpoint using the POST HTTP method.
+ if err != nil {
+ fmt.Println("Error in req: ", err)
+ return http.StatusInternalServerError, ""
+ }
+ c := &http.Client{
+ Timeout: 15 * time.Second,
+ }
+As before, we define a timeout period for the client in case the server is too busy
+responding
+
+resp, err := c.Do(req)
+ defer resp.Body.Close()
+ if resp == nil || (resp.StatusCode == http.StatusNotFound) {
+ return resp.StatusCode, ""
+ }
+ data, _ := io.ReadAll(resp.Body)
+ return resp.StatusCode, string(data)
+}
+The timeEndpoint() function is for testing the /time endpoint—note that this
+endpoint does not require any data from the client, so the client request is empty.
+The server is going to return a time and date string.
+func slashEndpoint(server, URL string) (int, string) {
+ req, err := http.NewRequest("POST", server+URL, nil)
+We are going to access / using the POST HTTP method.
+ if err != nil {
+ fmt.Println("Error in req: ", err)
+ return http.StatusInternalServerError, ""
+ }
+ c := &http.Client{
+ Timeout: 15 * time.Second,
+ }
+It is considered a good practice to have a timeout period on the client side in case
+there are delays in the server response.
+ resp, err := c.Do(req)
+ defer resp.Body.Close()
+ if resp == nil {
+ return resp.StatusCode, ""
+ }
+ data, _ := io.ReadAll(resp.Body)
+ return resp.StatusCode, string(data)
+}
+
+The slashEndpoint() function is for testing the default endpoint in the server—note
+that this endpoint does not require any data from the client.
+Next is the implementation of the main() function, which uses all previous functions
+to visit the RESTful server endpoints:
+func main() {
+ if len(os.Args) != 2 {
+ fmt.Println("Wrong number of arguments!")
+ fmt.Println("Need: Server")
+ return
+ }
+ server := os.Args[1]
+The server variable holds both the server address and the port number that is going
+to be used.
+ fmt.Println("/add")
+ HTTPcode := addEndpoint(server, u1)
+ if HTTPcode != http.StatusOK {
+ fmt.Println("u1 Return code:", HTTPcode)
+ } else {
+ fmt.Println("u1 Data added:", u1, HTTPcode)
+ }
+ HTTPcode = addEndpoint(server, u2)
+ if HTTPcode != http.StatusOK {
+ fmt.Println("u2 Return code:", HTTPcode)
+ } else {
+ fmt.Println("u2 Data added:", u2, HTTPcode)
+ }
+ HTTPcode = addEndpoint(server, u3)
+ if HTTPcode != http.StatusOK {
+ fmt.Println("u3 Return code:", HTTPcode)
+ } else {
+ fmt.Println("u3 Data added:", u3, HTTPcode)
+ }
+All the previous code is used for testing the /add endpoint using various types of
+data.
+
+fmt.Println("/get")
+ HTTPcode = getEndpoint(server, u1)
+ fmt.Println("/get u1 return code:", HTTPcode)
+ HTTPcode = getEndpoint(server, u2)
+ fmt.Println("/get u2 return code:", HTTPcode)
+ HTTPcode = getEndpoint(server, u3)
+ fmt.Println("/get u3 return code:", HTTPcode)
+All the previous code is used for testing the /get endpoint using various types of
+input. We only test for the return code because the HTTP code specifies the success
+or failure of the operation.
+ fmt.Println("/delete")
+ HTTPcode = deleteEndpoint(server, u1)
+ fmt.Println("/delete u1 return code:", HTTPcode)
+ HTTPcode = deleteEndpoint(server, u1)
+ fmt.Println("/delete u1 return code:", HTTPcode)
+ HTTPcode = deleteEndpoint(server, u2)
+ fmt.Println("/delete u2 return code:", HTTPcode)
+ HTTPcode = deleteEndpoint(server, u3)
+ fmt.Println("/delete u3 return code:", HTTPcode)
+All the previous code is used for testing the /delete endpoint using various types
+of input. Once again, we print the HTTP code of the interaction because the value
+of the HTTP code specifies the success or failure of the operation.
+ fmt.Println("/time")
+ HTTPcode, myTime := timeEndpoint(server)
+ fmt.Print("/time returned: ", HTTPcode, " ", myTime)
+ time.Sleep(time.Second)
+ HTTPcode, myTime = timeEndpoint(server)
+ fmt.Print("/time returned: ", HTTPcode, " ", myTime)
+The previous code tests the /time endpoint—it prints the HTTP code as well as the
+rest of the server response.
+ fmt.Println("/")
+ URL := "/"
+ HTTPcode, response := slashEndpoint(server, URL)
+ fmt.Print("/ returned: ", HTTPcode, " with response: ", response)
+ fmt.Println("/wh
+ 
+ URL = "/what"
+ HTTPcode, response = slashEndpoint(server, URL)
+ fmt.Print(URL, " returned: ", HTTPcode, " with response: ",
+response)
+}
+The last part of the program tries to connect to an endpoint that does not exist to
+verify the correct operation of the default handler function.
+Running rClient.go while rServer.go is already running produces the next kind
+of output:
+$ go run rClient.go http://localhost:1234
+/add
+u1 Data added: {admin admin} 200
+u2 Data added: {tsoukalos pass} 200
+u3 Return code: 400
+The previous part is related to the testing of the /add endpoint. The first two users
+were successfully added, whereas the third user (var u3 = User{"", "pass"}) was
+not added because it does not contain all the required information.
+/get
+/get returned: {"user":"admin","password":"admin"}
+/get u1 return code: 200
+/get returned: {"user":"tsoukalos","password":"pass"}
+/get u2 return code: 200
+/get returned: Map - Resource not found!
+/get u3 return code: 404
+The previous part is related to the testing of the /get endpoint. The data of the
+first two users with the usernames admin and tsoukalos was successfully returned,
+whereas the user stored in the u3 variable was not found.
+/delete
+/delete returned: {"user":"admin","password":"admin"}
+/delete u1 return code: 200
+/delete returned: Delete - Resource not found!
+/delete u1 return code: 404
+/delete returned: {"user":"tsoukalos","password":"pass"}
+/delete u2 return code: 200
+/delete returned: Delete - Resource not found!
+/delete u3 return code: 404
+
+
+The previous output is related to the testing of the /delete endpoint. The users admin
+and tsoukalos were deleted. However, trying to delete admin for the second time
+failed.
+/time
+/time returned: 200 The current time is: Tue, 20 Apr 2021 10:23:04 EEST
+/time returned: 200 The current time is: Tue, 20 Apr 2021 10:23:05 EEST
+Similarly, the previous part is related to the testing of the /time endpoint.
+/
+/ returned: 404 with response: Thanks for visiting!
+/what
+/what returned: 404 with response: Thanks for visiting!
+The last part of the output is related to the operation of the default handler.
+So far, both the RESTful server and the client can interact with each other. However,
+neither of them perform a real job. The next section shows how to develop a realworld RESTful server using gorilla/mux and a database backend for storing data.
+Creating a functional RESTful server
+This section illustrates how to develop a RESTful server in Go given a REST API.
+The biggest difference between the presented RESTful service and the phone
+book application created in Chapter 8, Building Web Services, is that the RESTful
+service in this chapter uses JSON messages everywhere, whereas the phone book
+application interacts and works using plain text messages. If you are thinking of
+using net/http for the implementation of the RESTful server, please do not do so!
+This implementation uses the gorilla/mux package, which is a much better choice
+because it supports subrouters—more about that in the Using gorilla/mux subsection.
+The purpose of the RESTful server is to implement a login/authentication system.
+The purpose of the login system is to keep track of the users who are logged in, as
+well as their permissions. The system comes with a default administrator user named
+admin—the default password is also admin and you should change it. The application
+stores its data in a database (PostgreSQL), which means that if you restart it, the list
+of existing users is read from that database and is not lost.
+
+The REST API
+The API of an application helps you implement the functionality that you have in
+mind. However, this is a job for the client, not the server. The job of the server is to
+facilitate the job of its clients as much as possible by supporting a simple yet fully
+working functionality through a properly defined and implemented REST API. Make
+sure that you understand that before trying to develop and use a RESTful server.
+We are going to define the endpoints that are going to be used, the HTTP codes that
+are going to return, as well as the allowed method or methods. Creating a RESTful
+server based on a REST API for production is a serious job that should not be taken
+lightly. Creating a prototype to test and validate your ideas and designs is going to
+save you lots of time in the long run. Always begin with a prototype.
+The supported endpoints as well as the supported HTTP methods and the
+parameters are as follows:
+• /: Used for catching and serving everything that is not a match. This
+endpoint works with all HTTP methods.
+• /getall: Used for getting the full contents of the database. Using this requires
+a user with administrative privileges. This endpoint might return multiple
+JSON records and works with the GET HTTP method.
+• /getid/username: Used for getting the ID of a user identified by their
+username, which is passed to the endpoint. This command should be issued
+by a user with administrative privileges and supports the GET HTTP method.
+• /username/ID: Used for deleting or getting information about the user with
+an ID equal to ID, depending on the HTTP method used. Therefore, the
+actual action that is going to be performed depends on the HTTP method
+used. The DELETE method deletes the user, whereas the GET method returns
+the user information. This endpoint should be issued by a user with
+administrative privileges.
+• /logged: Used for getting a list of all logged-in users. This endpoint might
+return multiple JSON records and requires the use of the GET HTTP method.
+• /update: Used for updating the username, the password, or the admin status
+of a user—the ID of the user in the database remains the same. This endpoint
+works with the PUT HTTP method only and the search for the user is based
+on the username.
+• /login: Used for logging in a user to the system, given a username and a
+password. This endpoint works with the POST HTTP method.
+• /logout: Used for logging out a user, given a username and a password.
+This endpoint works with the POST HTTP method.
+
+• /add: Used for adding a new user to the database. This endpoint works
+with the POST HTTP method and is issued by a user with administrative
+privileges.
+• /time: This is an endpoint used mainly for testing purposes. It is the only
+endpoint that does not work with JSON data, does not require a valid
+account, and works with all HTTP methods.
+Now, let us discuss the capabilities and the functionality of the gorilla/mux package.
+Using gorilla/mux
+The gorilla/mux package (https://github.com/gorilla/mux) is a popular and
+powerful alternative to the default Go router that allows you to match incoming
+requests to their respective handler. Although there exist many differences between
+the default Go router (http.ServeMux) and mux.Router (the gorilla/mux router), the
+main difference is that mux.Router supports multiple conditions when matching
+a route with a handler function. This means that you can write less code to handle
+some options such as the HTTP method used. Let us begin by presenting some
+matching examples—this functionality is not supported by the default Go router:
+• r.HandleFunc("/url", UrlHandlerFunction): The previous command calls
+the UrlHandlerFunction function each time /url is visited.
+• r.HandleFunc("/url", UrlHandlerFunction).Methods(http.MethodPut):
+This example shows how you can tell Gorilla to match a specific HTTP
+method (PUT in this case, which is defined by the use of http.MethodPut),
+which saves you from having to write code to do that manually.
+• mux.NotFoundHandler = http.HandlerFunc(handlers.DefaultHandler):
+With Gorilla, the right way to match anything that is not a match by any
+other path is by using mux.NotFoundHandler.
+• mux.MethodNotAllowedHandler = notAllowed: If a method is not allowed for
+an existing route, it is handled with the help of MethodNotAllowedHandler.
+This is specific to gorilla/mux.
+• s.HandleFunc("/users/{id:[0-9]+}"), HandlerFunction): This last
+example shows that you can define a variable in a path using a name (id)
+and a pattern and Gorilla does the matching for you! If there is not a regular
+expression, then the match is going to be anything from the beginning slash
+to the next slash in the path.
+Now, let us talk about another capability of gorilla/mux, which is subrouters
+
+The use of subrouters
+The server implementation uses subrouters. A subrouter is a nested route that will
+only be examined for potential matches if the parent route matches the parameters of
+the subrouter. The good thing is that the parent route can contain conditions that are
+common among all paths that are defined under a subrouter, which includes hosts,
+path prefixes, and, as it happens in our case, HTTP request methods. As a result,
+our subrouters are divided based on the common request method of the endpoints
+that follow. Not only does this optimize the request matchings, but it also makes the
+structure of the code easier to understand.
+As an example, the subrouter for the DELETE HTTP method is as simple as the
+following:
+deleteMux := mux.Methods(http.MethodDelete).Subrouter()
+deleteMux.HandleFunc("/username/{id:[0-9]+}", handlers.DeleteHandler)
+The first statement is for defining the common characteristics of the subrouter,
+which in this case is the http.MethodDelete HTTP method, whereas the remaining
+statement, which in this case is the deleteMux.HandleFunc(...) one, is for defining
+the supported paths.
+Yes, gorilla/mux might be more difficult than the default Go router, but you should
+understand by now the benefits of the gorilla/mux package for working with HTTP
+services.
+Working with the database
+In this subsection, we develop a Go package for working with the PostgreSQL
+database that supports the functionality of the RESTful server. The package is
+named restdb and is stored in https://github.com/mactsouk/restdb. Due to
+the use of Go modules, its development can take place anywhere you want in
+your filesystem—in this case, in the ~/code/restdb folder. So, we run go mod
+init github.com/mactsouk/restdb to enable Go modules for the restdb package
+during its development.
+The RESTful server itself knows nothing about the PostgreSQL
+server. All related functionality is kept in the restdb package,
+which means that if you change the database, the handler functions
+do not have to know about it.
+
+To make things easier for the readers, the database is going to run using Docker and
+with a configuration that can be found in docker-compose.yml, inside the restdb
+GitHub repository, which comes with the following contents:
+version: '3.1'
+services:
+ postgres:
+ image: postgres
+ container_name: postgredb
+ environment:
+ POSTGRES_USER: mtsouk
+ POSTGRES_PASSWORD: pass
+ POSTGRES_DB: restapi
+ volumes:
+ - ./postgres:/var/lib/postgresql/data/
+ ports:
+ - 5432:5432
+volumes:
+ postgres_data:
+ driver: local
+So, the PostgreSQL server listens to port number 5432, both internally and externally.
+What really matters is the external port number because this is what all clients are
+going to be using. The database name, the database table, and the admin user are
+created using the next create_db.sql SQL file:
+DROP DATABASE IF EXISTS restapi;
+CREATE DATABASE restapi;
+\c restapi;
+/*
+Users
+*/
+CREATE TABLE users (
+id SERIAL PRIMARY KEY,
+username VARCHAR NOT NULL,
+password VARCHAR NOT NULL,
+lastlogin INT,
+admin INT,
+
+active INT
+);
+INSERT INTO users (username, password, lastlogin, admin, active) VALUES
+('admin', 'admin', 1620922454, 1, 1);
+Provided that PostgreSQL is executed using the presented docker-compose.yml, you
+can use create_db.sql as follows:
+$ psql -U mtsouk postgres -h 127.0.0.1 < create_db.sql
+Password for user mtsouk:
+DROP DATABASE
+CREATE DATABASE
+You are now connected to database "restapi" as user "mtsouk".
+CREATE TABLE
+INSERT 0 1
+As most commands in restdb work in a similar way, we are going to present the
+most important functions here, beginning with ConnectPostgres():
+func ConnectPostgres() *sql.DB {
+ conn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s
+sslmode=disable",
+ Hostname, Port, Username, Password, Database)
+All of Hostname, Port, Username, Password, and Database are global variables defined
+elsewhere in the package—they contain the connection details.
+ db, err := sql.Open("postgres", conn)
+ if err != nil {
+ log.Println(err)
+ return nil
+ }
+ return db
+}
+As we need to connect to PostgreSQL all the time, we created a helper function that
+returns an *sql.DB variable that can be used for interaction with PostgreSQL.
+Next, we present the DeleteUser() function:
+func DeleteUser(ID int) bool {
+ db := ConnectPostgres()
+ 
+ if db == nil {
+ log.Println("Cannot connect to PostgreSQL!")
+ db.Close()
+ return false
+ }
+ defer db.Close()
+The preceding code is how we use ConnectPostgres() to get a database connection
+to work with.
+ t := FindUserID(ID)
+ if t.ID == 0 {
+ log.Println("User", ID, "does not exist.")
+ return false
+ }
+Here, we use the FindUserID() helper function to make sure that the user with the
+given user ID exists in the database. If the user does not exist, the function stops and
+returns false.
+ stmt, err := db.Prepare("DELETE FROM users WHERE ID = $1")
+ if err != nil {
+ log.Println("DeleteUser:", err)
+ return false
+ }
+This is the actual statement for deleting the user. We use Prepare() to construct
+the required SQL statement that we will execute using Exec(). The $1 in Prepare()
+denotes a parameter that is going to be given in Exec(). If we wanted to have more
+parameters, we should have named them $2, $3, and so on.
+ _, err = stmt.Exec(ID)
+ if err != nil {
+ log.Println("DeleteUser:", err)
+ return false
+ }
+ return true
+}
+This is where the implementation of the DeleteUser() function ends. The stmt.
+Exec(ID) statement is what deletes a user from the database
+
+The ListAllUsers() function, which is presented next, returns a slice of User
+elements, which holds all users found in the RESTful server:
+func ListAllUsers() []User {
+ db := ConnectPostgres()
+ if db == nil {
+ fmt.Println("Cannot connect to PostgreSQL!")
+ db.Close()
+ return []User{}
+ }
+ defer db.Close()
+ rows, err := db.Query("SELECT * FROM users \n")
+ if err != nil {
+ log.Println(err)
+ return []User{}
+ }
+As the SELECT query requires no parameters, we use Query() to run it instead of
+Prepare() and Exec(). Keep in mind that this is a query that most likely returns
+multiple records.
+ all := []User{}
+ var c1 int
+ var c2, c3 string
+ var c4 int64
+ var c5, c6 int
+ for rows.Next() {
+ err = rows.Scan(&c1, &c2, &c3, &c4, &c5, &c6)
+This is how we read the values from a single record returned by the SQL query.
+First, we define multiple variables for each one of the returned values and then we
+pass their pointers to Scan(). The rows.Next() method keeps returning records as
+long as there are results.
+ temp := User{c1, c2, c3, c4, c5, c6}
+ all = append(all, temp)
+ }
+ log.Println("All:", all)
+ return all
+}
+
+So, as mentioned before, a slice of User structures is returned from ListAllUsers().
+Lastly, we are going to present the implementation of IsUserValid():
+func IsUserValid(u User) bool {
+ db := ConnectPostgres()
+ if db == nil {
+ fmt.Println("Cannot connect to PostgreSQL!")
+ db.Close()
+ return false
+ }
+ defer db.Close()
+This is a common pattern: we call ConnectPostgres() and wait to get a connection to
+use.
+ rows, err := db.Query("SELECT * FROM users WHERE Username = $1 \n",
+u.Username)
+ if err != nil {
+ log.Println(err)
+ return false
+ }
+Here we pass our parameter to Query() without using Prepare() and Exec().
+ temp := User{}
+ var c1 int
+ var c2, c3 string
+ var c4 int64
+ var c5, c6 int
+Here, we create the required parameters to keep the output of the SQL query.
+ // If there exist multiple users with the same username,
+ // we will get the FIRST ONE only.
+ for rows.Next() {
+ err = rows.Scan(&c1, &c2, &c3, &c4, &c5, &c6)
+ if err != nil {
+ log.Println(err)
+ return false
+ }
+ temp = User{c1, c2, c3, c4, c5, c6}
+ }
+ 
+ Once again, the for loop keeps running for as long as rows.Next() returns new
+records.
+ if u.Username == temp.Username && u.Password == temp.Password {
+ return true
+ }
+This is an important point: not only should the given user exist, but the given
+password should be the same as the one stored in the database for a given user to be
+valid.
+ return false
+}
+You can view the rest of the restdb implementation on your own. Most functions
+are like the ones presented here. The code of restdb.go is going to be used in the
+implementation of the RESTful server that is presented next. However, as you are
+going to see, we are going to test restdb first.
+Testing the restdb package
+The RESTful server is developed in ~/go/src/github.com/mactsouk/rest-api—if
+you do not plan on making it available to the world, you do not need to create a
+separate GitHub repository for it. However, I do want to be able to share it with you,
+so the GitHub repository for the server is https://github.com/mactsouk/rest-api.
+Before continuing with the server implementation, we use the restdb package
+to make sure that it is working as expected before using it in the RESTful server
+implementation. The presented utility uses functions from restdb; you do not have
+to test every possible usage of the restdb package—just make sure that it works and
+that it connects to the PostgreSQL database. For this reason, we are going to create a
+separate command-line utility called useRestdb.go that contains the next code and is
+in the test-db directory. The most important detail in that file is the use of restdb.
+User in the code because this is the structure that is needed by the restdb package.
+We cannot pass a different structure as a parameter to the functions of restdb.
+Initializing modules and running useRestdb.go produces the next kind of output:
+$ go mod init
+go: creating new go.mod: module github.com/mactsouk/rest-api/test-db
+go: to add module requirements and sums:
+
+go mod tidy
+$ go mod tidy
+go: finding module for package github.com/mactsouk/restdb
+go: finding module for package github.com/lib/pq
+go: downloading github.com/mactsouk/restdb v0.0.0-20210510205310-
+63ba9fa172df
+go: found github.com/lib/pq in github.com/lib/pq v1.10.1
+go: found github.com/mactsouk/restdb in github.com/mactsouk/restdb
+v0.0.0-20210510205310-63ba9fa172df
+$ go run useRestdb.go
+&{0 {host=localhost port=5432 user=mtsouk password=pass dbname=restapi
+sslmode=disable 0x856110} 0 {0 0} [] map[] 0 0 0xc00007c240 false map[]
+map[] 0 0 0 0 <nil> 0 0 0 0 0x4dd260}
+{0 0 0 0}
+mike
+packt
+admin
+2021/05/17 09:40:23 Populating PostgreSQL
+User inserted successfully.
+2021/05/17 09:40:23 Found user: {9 mtsouk admin 1621233623 1 1}
+mtsouk: {9 mtsouk admin 1621233623 1 1}
+2021/05/17 09:40:23 Found user: {9 mtsouk admin 1621233623 1 1}
+User Deleted.
+mtsouk: {0 0 0 0}
+2021/05/17 09:40:23 User 0 does not exist.
+User not Deleted.
+2021/05/17 09:40:23 User 0 does not exist.
+User not Deleted.
+The absence of error messages tells us that, so far, the restdb package works as
+expected: users are added and deleted from the database and queries to the database
+are performed. Just remember that this is a quick and dirty way of testing a package.
+All packages are improved and new functionality is added to
+almost all existing packages. Should you wish to update the
+restdb package, or any other external package, and use the newer
+version while developing your own utilities, you can issue the
+go get -u -v command in the directory where the go.sum and
+go.mod files of your utility reside.
+
+Implementing the RESTful server
+Now that we are sure that the restdb package works as expected, we are ready to
+explain the implementation of the RESTful server. The server code is split into two
+files, both belonging to the main package: main.go and handlers.go. The main reason
+for doing so is to avoid having huge code files to work with and separating the
+functionality of the server logically.
+The most important part of main.go, which belongs to the main() function, is the
+following:
+ rMux.NotFoundHandler = http.HandlerFunc(DefaultHandler)
+First, we need to define the default handler function—although this is not necessary,
+it is a good practice to have such a handler.
+ notAllowed := notAllowedHandler{}
+ rMux.MethodNotAllowedHandler = notAllowed
+The MethodNotAllowedHandler handler is executed when you try to visit an endpoint
+using an unsupported HTTP method. The actual implementation of the handler is
+found in handlers.go.
+ rMux.HandleFunc("/time", TimeHandler)
+The /time endpoint is supported by all HTTP methods, so it does not belong to any
+subrouter.
+ // Define Handler Functions
+ // Register GET
+ getMux := rMux.Methods(http.MethodGet).Subrouter()
+ getMux.HandleFunc("/getall", GetAllHandler)
+ getMux.HandleFunc("/getid/{username}", GetIDHandler)
+ getMux.HandleFunc("/logged", LoggedUsersHandler)
+ getMux.HandleFunc("/username/{id:[0-9]+}", GetUserDataHandler)
+First, we define a subrouter for the GET HTTP method along with the supported
+endpoints. Remember that gorilla/mux is responsible for making sure that only GET
+requests are going to be served by the getMux subrouter.
+ // Register PUT
+ // Update User
+ putMux := rMux.Methods(http.MethodPut).Subrouter()
+ putMux.HandleFunc("/update", UpdateHandler)
+ 
+ After that, we define a subrouter for PUT requests.
+ // Register POST
+ // Add User + Login + Logout
+ postMux := rMux.Methods(http.MethodPost).Subrouter()
+ postMux.HandleFunc("/add", AddHandler)
+ postMux.HandleFunc("/login", LoginHandler)
+ postMux.HandleFunc("/logout", LogoutHandler)
+Then, we define the subrouter for POST requests.
+ // Register DELETE
+ // Delete User
+ deleteMux := rMux.Methods(http.MethodDelete).Subrouter()
+ deleteMux.HandleFunc("/username/{id:[0-9]+}", DeleteHandler)
+The last subrouter is for DELETE HTTP methods. The code in gorilla/mux is
+responsible for choosing the correct subrouter based on the client request.
+ go func() {
+ log.Println("Listening to", PORT)
+ err := s.ListenAndServe()
+ if err != nil {
+ log.Printf("Error starting server: %s\n", err)
+ return
+ }
+ }()
+The HTTP server is executed as a goroutine because the program supports signal
+handling—refer to Chapter 7, Go Concurrency, for the details.
+ sigs := make(chan os.Signal, 1)
+ signal.Notify(sigs, os.Interrupt)
+ sig := <-sigs
+ log.Println("Quitting after signal:", sig)
+ time.Sleep(5 * time.Second)
+ s.Shutdown(nil)
+Last, we add signal handling for gracefully terminating the HTTP server. The sig :=
+<-sigs statement prevents the main() function from exiting unless an os.Interrupt
+signal is received.
+
+The handlers.go file contains the implementations for the handler functions and is
+also part of the main package—its most important parts are the following:
+// AddHandler is for adding a new user
+func AddHandler(rw http.ResponseWriter, r *http.Request) {
+ log.Println("AddHandler Serving:", r.URL.Path, "from", r.Host)
+ d, err := io.ReadAll(r.Body)
+ if err != nil {
+ rw.WriteHeader(http.StatusBadRequest)
+ log.Println(err)
+ return
+ }
+This handler is for the /add endpoint. The server reads the client input using
+io.ReadAll().
+ if len(d) == 0 {
+ rw.WriteHeader(http.StatusBadRequest)
+ log.Println("No input!")
+ return
+ }
+Then, the code makes sure that the body of the client request is not empty.
+ // We read two structures as an array:
+ // 1. The user issuing the command
+ // 2. The user to be added
+ var users = []restdb.User{}
+ err = json.Unmarshal(d, &users)
+ if err != nil {
+ log.Println(err)
+ rw.WriteHeader(http.StatusBadRequest)
+ return
+ }
+As the /add endpoint requires two User structures, the previous code uses json.
+Unmarshal() to put them into a []restdb.User variable—this means that the client
+should send these two JSON records using an array. The reason for using restdb.
+User is that all database-related functions work with restdb.User variables. Even
+if we had a structure with the same definition as restdb.User, Go would consider
+them as different. This is not the case with the client because the client sends data
+without a data type associated with it.
+
+log.Println(users)
+ if !restdb.IsUserAdmin(users[0]) {
+ log.Println("Issued by non-admin user:", users[0].Username)
+ rw.WriteHeader(http.StatusBadRequest)
+ return
+ }
+If the user issuing the command is not an admin, the request fails.
+restdb.IsUserAdmin() is implemented in the restdb package.
+ result := restdb.InsertUser(users[1])
+ if !result {
+ rw.WriteHeader(http.StatusBadRequest)
+ }
+}
+Otherwise, restdb.InsertUser() inserts the desired user into the database.
+Last, we present the handler for the /getall endpoint.
+// GetAllHandler is for getting all data from the user database
+func GetAllHandler(rw http.ResponseWriter, r *http.Request) {
+ log.Println("GetAllHandler Serving:", r.URL.Path, "from", r.Host)
+ d, err := io.ReadAll(r.Body)
+ if err != nil {
+ rw.WriteHeader(http.StatusBadRequest)
+ log.Println(err)
+ return
+ }
+Once again, we read the data from the client using io.ReadAll(r.Body) and we make
+sure that the process is error-free by examining the err variable.
+ if len(d) == 0 {
+ rw.WriteHeader(http.StatusBadRequest)
+ log.Println("No input!")
+ return
+ }
+ var user = restdb.User{}
+ err = json.Unmarshal(d, &user)
+ 
+ if err != nil {
+ log.Println(err)
+ rw.WriteHeader(http.StatusBadRequest)
+ return
+ }
+Here, we put the client data into a restdb.User variable. The /getall endpoint
+requires a single restdb.User record as input.
+ if !restdb.IsUserAdmin(user) {
+ log.Println("User", user, "is not an admin!")
+ rw.WriteHeader(http.StatusBadRequest)
+ return
+ }
+Only admin users can visit /getall and get back the list of all users.
+ err = SliceToJSON(restdb.ListAllUsers(), rw)
+ if err != nil {
+ log.Println(err)
+ rw.WriteHeader(http.StatusBadRequest)
+ return
+ }
+}
+The last part of the code is about getting the desired data from the database and
+sending it to the client using the SliceToJSON(restdb.ListAllUsers(), rw) call.
+Feel free to put each handler into a separate Go file. The general idea is that if you
+have lots of handler functions, using a separate file for each handler function is a
+good practice.
+The next section tests the RESTful server using curl(1) before developing a proper
+client.
+Testing the RESTful server
+This subsection shows how to test the RESTful server using the curl(1) utility.
+You should test the RESTful server as much and as extensively as possible to find
+bugs or unwanted behavior. As we use two files for the server implementation, we
+need to run it as go run main.go handlers.go. Additionally, do not forget to have
+PostgreSQL up and running. We begin by testing the /time handler, which works
+with all HTTP methods:
+
+
+$ curl localhost:1234/time
+The current time is: Mon, 17 May 2021 09:14:00 EEST
+Next, we test the default handler:
+$ curl localhost:1234/
+/ is not supported. Thanks for visiting!
+$ curl localhost:1234/doesNotExist
+/doesNotExist is not supported. Thanks for visiting!
+Last, we see what happens if we use an unsupported HTTP method with a
+supported endpoint—in this case, the /getall endpoint that works with GET only:
+$ curl -s -X PUT -H 'Content-Type: application/json' localhost:1234/
+getall
+Method not allowed!
+Although the /getall endpoint requires a valid user to operate, the fact that we are
+using an HTTP method that is not supported by that endpoint takes precedence and
+the call fails for the right reasons.
+The next subsection tests all handlers that support the GET HTTP method.
+Testing GET handlers
+First, we test the /getall endpoint:
+$ curl -s -X GET -H 'Content-Type: application/json' -d '{"username":
+"admin", "password" : "newPass"}' localhost:1234/getall
+[{"ID":1,"Username":"admin","Password":"newPass","LastLogin":1620922454
+,"Admin":1,"Active":1},{"ID":6,"Username":"mihalis","Password":"admin",
+"LastLogin":1620926815,"Admin":1,"Active":0},{"ID":7,"Username":"mike",
+"Password":"admin","LastLogin":1620926862,"Admin":1,"Active":0}]
+The previous output is a list of all existing users found in the database in JSON
+format.
+
+Then, we test the /logged endpoint:
+$ curl -X GET -H 'Content-Type: application/json' -d '{"username":
+"admin", "password" : "newPass"}' localhost:1234/logged
+[{"ID":1,"Username":"admin","Password":"newPass","LastLogin":1620922454
+,"Admin":1,"Active":1}]
+After that, we test the /username/{id} endpoint:
+$ curl -X GET -H 'Content-Type: application/json' -d '{"username":
+"admin", "password" : "newPass"}' localhost:1234/username/7
+{"ID":7,"Username":"mike","Password":"admin","LastLogin":1620926862,"Ad
+min":1,"Active":0}
+Last, we test the /getid/{username} endpoint:
+$ curl -X GET -H 'Content-Type: application/json' -d '{"username":
+"admin", "password" : "newPass"}' localhost:1234/getid/admin
+User admin has ID: 1
+So far, we can get a list of existing users and the list of logged-in users and get
+information about specific users—all these endpoints use the GET method. The next
+subsection tests all handlers that support the POST HTTP method.
+Testing POST handlers
+First, we test the /add endpoint by adding the packt user, which does not have
+admin privileges:
+$ curl -X POST -H 'Content-Type: application/json' -d '[{"username":
+"admin", "password" : "newPass", "admin":1}, {"username": "packt",
+"password" : "admin", "admin":0} ]' localhost:1234/add
+The previous call passes an array of JSON records to the server to add a new user
+named packt. The command is issued by the admin user.
+If we try to add the same username more than once, the process is going to fail—
+this is revealed with the use of -v in the curl(1) command. The relevant message is
+HTTP/1.1 400 Bad Request.
+Additionally, if we try to add a new user using the credentials of a user that is not
+an administrator, the server is going to generate the Command issued by non-admin
+user: packt message.
+
+Then, we test the /login endpoint:
+$ curl -X POST -H 'Content-Type: application/json' -d '{"username":
+"packt", "password" : "admin"}' localhost:1234/login
+The previous command is used for logging in the packt user.
+Last, we test the /logout endpoint:
+$ curl -X POST -H 'Content-Type: application/json' -d '{"username":
+"packt", "password" : "admin"}' localhost:1234/logout
+The previous command is used for logging out the packt user. You can use the
+/logged endpoint to verify the results of the previous two interactions.
+Let us now test the only endpoint that supports the PUT HTTP method.
+Testing the PUT handler
+First, we test the /update endpoint as follows:
+$ curl -X PUT -H 'Content-Type: application/json' -d '[{"username":
+"admin", "password" : "newPass", "admin":1}, {"username": "admin",
+"password" : "justChanged", "admin":1} ]' localhost:1234/update
+The previous command changes the password of the admin user from newPass to
+justChanged.
+Then, we try to change a user password using the credentials of a non-admin user
+(packt):
+$ curl -X PUT -H 'Content-Type: application/json' -d '[{"Username
+":"packt","Password":"admin"}, {"username": "admin", "password" :
+"justChanged", "admin":1} ]' localhost:1234/update
+The generated log message is Command issued by non-admin user: packt.
+We might consider the fact that a non-admin user cannot even change their
+password a flaw—it might be, but this is the way the RESTful server is implemented.
+The idea is that non-admin users should not issue dangerous commands directly.
+Additionally, this flaw can be easily fixed as follows: generally speaking, regular
+users are not going to interact in this way with the server and are going to be offered
+a web interface for doing so. After that, an admin user can send the user request to
+the server. Therefore, this can be implemented in a different way that is more secure
+and does not give unnecessary privileges to regular users.
+Lastly, we are going to test the DELETE HTTP method.
+
+Testing the DELETE handler
+For the DELETE HTTP method, we need to test the /username/{id} endpoint. As
+that endpoint does not return any output, using -v in curl(1) is going to reveal the
+returned HTTP status code:
+$ curl -X DELETE -H 'Content-Type: application/json' -d '{"username":
+"admin", "password" : "justChanged"}' localhost:1234/username/6 -v
+The HTTP/1.1 200 OK status code verifies that the user was deleted successfully. If
+we try to delete the same user again, the request is going to fail, and the returned
+message is going to be HTTP/1.1 404 Not Found.
+So far, we know that the RESTful server works as expected. However, curl(1) is far
+from perfect for working with the RESTful server on a daily basis. The next section
+shows how to develop a command-line client for the RESTful server we developed
+in this section.
+Creating a RESTful client
+Creating a RESTful client is much easier than programming a server mainly because
+you do not have to work with the database on the client side. The only thing that the
+client needs to do is send the right amount and kind of data to the server and receive
+back the server response. The RESTful client is going to be developed in ~/go/src/
+github.com/mactsouk/rest-cli—if you do not plan to make it available to the world,
+you do not need to create a separate GitHub repository for it. However, for you to
+be able to see the code of the client, I created a GitHub repository, which is https://
+github.com/mactsouk/rest-cli.
+The supported first-level cobra commands are the following:
+• list: This command accesses the /getall endpoint and returns the list of
+users
+• time: This command is for visiting the /time endpoint
+• update: This command is for updating user records—the user ID cannot
+change
+• logged: This command lists all logged-in users
+• delete: This command deletes an existing user
+• login: This command is for logging in a user
+
+• logout: This command is for logging out a user
+• add: This command is for adding a new user to the system
+• getid: This command returns the ID of a user, identified by their username
+• search: This command displays information about a given user, identified by
+their ID
+There exist two main command-line flags for passing the username and the
+password of the user issuing the command: user and pass. As you are going to
+see in their implementations, they have the -u and -p shortcuts, respectively.
+Additionally, as the JSON record that holds user info has a small number of fields,
+all the fields are going to be given in a JSON record as plain text, using the data
+flag and -d shortcut—this is implemented in root.go. Each command is going to
+read the desired flags only and the desired fields of the input JSON record—this is
+implemented in the source code file of each command. Lastly, the utility is going
+to return JSON records, when this makes sense, or a text message related to the
+endpoint that was visited. Now, let us continue with the structure of the client and
+the implementation of the commands.
+Creating the structure of the command-line
+client
+This subsection uses the cobra utility to create a structure for the command-line
+utility. But first we are going to create a proper cobra project and Go module:
+$ cd ~/go/src/github.com/mactsouk
+$ git clone git@github.com:mactsouk/rest-cli.git
+$ cd rest-cli
+$ ~/go/bin/cobra init --pkg-name github.com/mactsouk/rest-cli
+$ go mod init
+$ go mod tidy
+$ go run main.go
+
+You do not need to execute the last command, but it makes sure that everything is
+fine so far. After that, we are ready to define the commands that the utility is going
+to support by running the following cobra commands:
+$ ~/go/bin/cobra add add
+$ ~/go/bin/cobra add delete
+$ ~/go/bin/cobra add list
+$ ~/go/bin/cobra add logged
+$ ~/go/bin/cobra add login
+$ ~/go/bin/cobra add logout
+$ ~/go/bin/cobra add search
+$ ~/go/bin/cobra add getid
+$ ~/go/bin/cobra add time
+$ ~/go/bin/cobra add update
+Now that we have the desired structure, we can begin implementing the commands
+and maybe remove some of the comments inserted by cobra, which is the subject of
+the next subsection.
+Implementing the RESTful client commands
+As there is no point in presenting all code that can be found in the GitHub
+repository, we are going to present the most characteristic code found in some of
+the commands, starting with root.go, which is where the next global variables are
+defined:
+var SERVER string
+var PORT string
+var data string
+var username string
+var password string
+These global variables hold the values of the command-line options of the utility
+and are accessible from anywhere in the utility code.
+type User struct {
+ ID int `json:"id"`
+ Username string `json:"username"`
+ Password string `json:"password"`
+ LastLogin int64 `json:"lastlogin"`
+ Admin int `json:"admin"`
+ Active int `json:"active"`
+}
+
+We define the User structure for sending and receiving data.
+func init() {
+ rootCmd.PersistentFlags().StringVarP(&username, "username", "u",
+"username", "The username")
+ rootCmd.PersistentFlags().StringVarP(&password, "password", "p",
+"admin", "The password")
+ rootCmd.PersistentFlags().StringVarP(&data, "data", "d", "{}",
+"JSON Record")
+ rootCmd.PersistentFlags().StringVarP(&SERVER, "server", "s",
+"http://localhost", "RESTful server hostname")
+ rootCmd.PersistentFlags().StringVarP(&PORT, "port", "P", ":1234",
+"Port of RESTful Server")
+}
+We present the implementation of the init() function that holds the definitions of
+the command-line options. The values of the command-line flags are automatically
+stored in the variables that are passed as the first argument to rootCmd.
+PersistentFlags().StringVarP(). So, the username flag, which has the -u alias,
+stores its value to the username global variable.
+Next is the implementation of the list command as found in list.go:
+var listCmd = &cobra.Command{
+ Use: "list",
+ Short: "List all available users",
+ Long: `The list command lists all available users.`,
+This part is about the help messages that are displayed for the command. Although
+they are optional, it is good to have an accurate description of the command. We
+continue with the implementation:
+ Run: func(cmd *cobra.Command, args []string) {
+ endpoint := "/getall"
+ user := User{Username: username, Password: password}
+First, we construct a User variable to hold the username and the password of the user
+issuing the command—this variable is going to be passed to the server.
+ // bytes.Buffer is both a Reader and a Writer
+ buf := new(bytes.Buffer)
+ err := user.ToJSON(b
+ 
+ if err != nil {
+ fmt.Println("JSON:", err)
+ return
+ }
+We need to encode the user variable before passing it to the RESTful server, which
+is the purpose of the ToJSON() method. The implementation of the ToJSON() method
+is found in root.go.
+ req, err := http.NewRequest(http.MethodGet,
+ SERVER+PORT+endpoint, buf)
+ if err != nil {
+ fmt.Println("GetAll – Error in req: ", err)
+ return
+ }
+ req.Header.Set("Content-Type", "application/json")
+Here, we create the request using the SERVER and PORT global variables followed by
+the endpoint, using the desired HTTP method (http.MethodGet), and declare that
+we are going to send JSON data using Header.Set().
+ c := &http.Client{
+ Timeout: 15 * time.Second,
+ }
+ resp, err := c.Do(req)
+ if err != nil {
+ fmt.Println("Do:", err)
+ return
+ }
+After that, we send our data to the server using Do() and get the server response.
+ if resp.StatusCode != http.StatusOK {
+ fmt.Println(resp)
+ return
+ }
+If the status code of the response is not http.StatusOK, then the request has failed.
+ var users = []User{}
+ SliceFromJSON(&users, resp.Body)
+ data, err := PrettyJSON(user
+ 
+ if err != nil {
+ fmt.Println(err)
+ return
+ }
+ fmt.Print(data)
+ },
+}
+If the status code is http.StatusOK, then we prepare to read a slice of User
+variables. As these variables hold JSON records, we need to decode them using
+SliceFromJSON(), which is defined in root.go.
+Last is the code of the add command, as found in add.go. The difference between add
+and list is that the add command needs to send two JSON records to the RESTful
+server: the first one holding the data of the user issuing the command, and the
+second holding the data for the user that is about to be added to the system. The
+username and password flags hold the data for the Username and Password fields
+of the first record, whereas the data command-line flag holds the data for the
+second record.
+var addCmd = &cobra.Command{
+ Use: "add",
+ Short: "Add a new user",
+ Long: `Add a new user to the system.`,
+ Run: func(cmd *cobra.Command, args []string) {
+ endpoint := "/add"
+ u1 := User{Username: username, Password: password}
+As before, we get the information about the user issuing the command and put it
+into a structure.
+ // Convert data string to User Structure
+ var u2 User
+ err := json.Unmarshal([]byte(data), &u2)
+ if err != nil {
+ fmt.Println("Unmarshal:", err)
+ return
+ }
+ 
+ As the data command-line flag holds a string value, we need to convert that string
+value to a User structure—this is the purpose of the json.Unmarshal() call.
+ users := []User{}
+ users = append(users, u1)
+ users = append(users, u2)
+Then we create a slice of User variables that are going to be sent to the server. The
+order you put the structures in that slice is important: first, the user issuing the
+command, and then the data of the user that is going to be created.
+ buf := new(bytes.Buffer)
+ err = SliceToJSON(users, buf)
+ if err != nil {
+ fmt.Println("JSON:", err)
+ return
+ }
+Then we encode that slice before sending it to the RESTful server through the HTTP
+request.
+ req, err := http.NewRequest(http.MethodPost,
+ SERVER+PORT+endpoint, buf)
+ if err != nil {
+ fmt.Println("GetAll – Error in req: ", err)
+ return
+ }
+ req.Header.Set("Content-Type", "application/json")
+ c := &http.Client{
+ Timeout: 15 * time.Second,
+ }
+ resp, err := c.Do(req)
+ if err != nil {
+ fmt.Println("Do:", err)
+ return
+ }
+We prepare the request and send it to the server. The server is responsible for
+decoding the provided data and acting accordingly, in this case adding a new user to
+the system. The client just needs to visit the correct endpoint using the appropriate
+HTTP method (http.MethodPost) and check the returned status code.
+
+if resp.StatusCode != http.StatusOK {
+ fmt.Println("Status code:", resp.Status)
+ } else {
+ fmt.Println("User", u2.Username, "added.")
+ }
+ },
+}
+The add command does not return any data back to the client—what interests us
+is the HTTP status code because this is what determines the success or failure of
+the command.
+Using the RESTful client
+We are now going to use the command-line utility to interact with the RESTful
+server. This type of utility can be used for administering a RESTful server, creating
+automated tasks, and carrying out CI/CD jobs. For reasons of simplicity, the client
+and the server reside on the same machine, and we mostly work with the default
+user (admin)—this makes the presented commands shorter. Additionally, we execute
+go build to create a binary executable to avoid using go main.go all the time.
+First, we get the time from the server:
+$ ./rest-cli time
+The current time is: Tue, 25 May 2021 08:38:04 EEST
+Next, we list all users. As the output depends on the contents of the database, we
+print a small part of the output. Note that the list command requires a user with
+admin privileges:
+$ ./rest-cli list -u admin -p admin
+[
+ {
+ "id": 7,
+ "username": "mike",
+ "password": "admin",
+ "lastlogin": 1620926862,
+ "admin": 1,
+ "active": 0
+ },
+ 
+ Next, we test the logged command with an invalid password:
+$ ./rest-cli logged -u admin -p notPass
+&{400 Bad Request 400 HTTP/1.1 1 1 map[Content-Length:[0] Date:[Tue,
+25 May 2021 05:42:36 GMT]] 0xc000190020 0 [] false false map[]
+0xc0000fc800 <nil>}
+As expected, the command fails—this output is used for debugging purposes. After
+making sure that the command works as expected, you might want to print a more
+appropriate error message.
+After that, we test the add command:
+$ ./rest-cli add -u admin -p admin --data '{"Username":"newUser",
+"Password":"aPass"}'
+User newUser added.
+Trying to add the same user again is going to fail:
+$ ./rest-cli add -u admin -p admin --data '{"Username":"newUser",
+"Password":"aPass"}'
+Status code: 400 Bad Request
+Next, we are going to delete newUser—but first, we need to find the user ID of
+newUser:
+$ ./rest-cli getid -u admin -p admin --data '{"Username":"newUser"}'
+User newUser has ID: 15
+$ ./rest-cli delete -u admin -p admin --data '{"ID":15}'
+User with ID 15 deleted.
+Feel free to continue testing the RESTful client and let me know if you find any bugs!
+Working with multiple REST API versions
+A REST API can change and evolve over time. There exist various approaches on
+how to implement REST API versioning, including the following:
+• Using a custom HTTP header (version-used) to define the used version
+• Using a different subdomain for each version (v1.servername and
+v2.servername)
+• Using a combination of Accept and Content-Type headers—this method is
+based on content negotiation
+
+Using a different path for each version (/v1 and /v2 if the RESTful server
+supports two REST API versions)
+• Using a query parameter to reference the desired version (..../
+endpoint?version=v1 or ..../endpoint?v=1)
+There is no correct answer for how to implement REST API versioning. Use what
+seems more natural to you and your users. What is important is to be consistent
+and use the same approach everywhere. Personally, I prefer to use /v1/... for
+supporting the endpoints of version 1, and /v2/... for supporting the endpoints of
+version 2, and so on.
+The development of RESTful servers and clients has come to an end here. The next
+section illustrates how to upload and download binary files using gorilla/mux in
+case you want to add that feature.
+Uploading and downloading binary files
+It is not unusual to need to store binary files in a RESTful server and being able to
+download them afterward—for example, for developing photo libraries or document
+libraries. This section illustrates how to implement that functionality.
+For reasons of simplicity, the example is going to be included in the mactsouk/restapi GitHub repository used earlier for implementing the RESTful server. For this
+subsection, we are going to be using the file directory to store the relevant code,
+which is saved as binary.go. In reality, binary.go is a small RESTful server that
+only supports the uploading and downloading of binary files through the /files/
+endpoint.
+There exist three main ways to save the files you upload:
+• On the local filesystem
+• On a database management system that supports the storing of binary files
+• On the cloud using a cloud provider
+In our case, we are storing the files on the filesystem the server runs on. More
+specifically, we are storing uploaded files under /tmp/files as we are testing things.
+The code of binary.go is as follows:
+package main
+import (
+ "errors
+ 
+ "io"
+ "log"
+ "net/http"
+ "os"
+ "time"
+ "github.com/gorilla/mux"
+)
+var PORT = ":1234"
+var IMAGESPATH = "/tmp/files"
+The previous two global parameters hold the TCP port the server is going to listen
+to and the local path where uploaded files are going to be saved, respectively. Note
+that on most UNIX systems, /tmp is automatically emptied after a system reboot.
+func uploadFile(rw http.ResponseWriter, r *http.Request) {
+ filename, ok := mux.Vars(r)["filename"]
+ if !ok {
+ log.Println("filename value not set!")
+ rw.WriteHeader(http.StatusNotFound)
+ return
+ }
+ log.Println(filename)
+ saveFile(IMAGESPATH+"/"+filename, rw, r)
+}
+The uploadFile() function is responsible for the uploading of new files to the
+predefined directory. The most important part of it is the use of mux.Vars(r) for
+getting the value of the filename key. Note that the parameter to mux.Vars() is the
+http.Request variable. If the desired key exists, then the function continues and
+calls saveFile(). Otherwise, it returns without saving any files.
+func saveFile(path string, rw http.ResponseWriter, r *http.Request) {
+ log.Println("Saving to", path)
+ err := saveToFile(path, r.Body)
+ if err != nil {
+ log.Println(err)
+ return
+ }
+}
+
+The purpose of saveFile() is to save the uploaded file by calling saveToFile(). You
+might ask, why not combine both saveFile() and saveToFile() and have a single
+function? The answer is that this way, the code of saveToFile() is generic and can be
+reused by other utilities.
+func saveToFile(path string, contents io.Reader) error {
+ _, err := os.Stat(path)
+ if err == nil {
+ err = os.Remove(path)
+ if err != nil {
+ log.Println("Error deleting", path)
+ return err
+ }
+ } else if !os.IsNotExist(err) {
+ log.Println("Unexpected error:", err)
+ return err
+ }
+ f, err := os.Create(path)
+ if err != nil {
+ log.Println(err)
+ return err
+ }
+ defer f.Close()
+ n, err := io.Copy(f, contents)
+ if err != nil {
+ return err
+ }
+ log.Println("Bytes written:", n)
+ return nil
+}
+All the previous code is related to file I/O and is used for saving the contents of the
+contents io.Reader to the desired path.
+func createImageDirectory(d string) error {
+ _, err := os.Stat(d)
+ if os.IsNotExist(err) {
+ log.Println("Creating:", d)
+ err = os.MkdirAll(d, 0
+ 
+ if err != nil {
+ log.Println(err)
+ return err
+ }
+ } else if err != nil {
+ log.Println(err)
+ return err
+ }
+ fileInfo, _ := os.Stat(d)
+ mode := fileInfo.Mode()
+ if !mode.IsDir() {
+ msg := d + " is not a directory!"
+ return errors.New(msg)
+ }
+The purpose of createImageDirectory() is to create the directory where the files are
+going to be saved, if the directory does not already exist. If the path exists and is not
+a directory, then we have a problem, so the function returns a custom error message.
+ return nil
+}
+func main() {
+ err := createImageDirectory(IMAGESPATH)
+ if err != nil {
+ log.Println(err)
+ return
+ }
+ mux := mux.NewRouter()
+ putMux := mux.Methods(http.MethodPut).Subrouter()
+ putMux.HandleFunc("/files/{filename:[a-zA-Z0-9][a-zA-Z0-9\\.]*[azA-Z0-9]}", uploadFile)
+Only the PUT HTTP method is supported for uploading files to the server. The
+regular expression dictates that we want filenames that begin with a single letter or
+digit and end with a letter or digit. This means that filenames should not begin with
+. or .. to avoid visiting subdirectories and therefore compromising the security of
+the system. As we saw earlier, the code saves the filename value in a map using the
+filename key—this map is accessed by the uploadFile() function.
+
+getMux := mux.Methods(http.MethodGet).Subrouter()
+ getMux.Handle("/files/{filename:[a-zA-Z0-9][a-zA-Z0-9\\.]*[azA-Z0-9]}", http.StripPrefix("/files/", http.FileServer(http.
+Dir(IMAGESPATH))))
+The downloading part is a combination of the functionality of gorilla/mux and
+the Go handler for file servers. So, the external package offers support for regular
+expressions and an easy way to define that we want to use the GET HTTP method,
+whereas Go offers the functionality of http.FileServer() for serving the files. This
+mainly happens because we are serving files from the local filesystem. However,
+nothing prohibits us from writing our own handler function for the downloading
+of the binary files when we want to divert from the default behavior.
+ s := http.Server{
+ Addr: PORT,
+ Handler: mux,
+ ErrorLog: nil,
+ ReadTimeout: 5 * time.Second,
+ WriteTimeout: 5 * time.Second,
+ IdleTimeout: 10 * time.Second,
+ }
+ log.Println("Listening to", PORT)
+ err = s.ListenAndServe()
+ if err != nil {
+ log.Printf("Error starting server: %s\n", err)
+ return
+ }
+}
+The last part of the utility is about beginning the server with the desired parameters.
+It is really surprising that main() is pretty short, yet it does so many useful things.
+We now need to initialize the Go module functionality for binary.go to run:
+$ go mod init
+$ go mod tidy
+$ go mod download
+We are going to use curl(1) to work with binary.go:
+$ curl -X PUT localhost:1234/files/packt.png --data-binary @packt.png
+
+So, first we upload a file named packt.png to the server and the file is saved as
+packt.png on the server side. The next command saves the same file as 1.png on
+the server:
+$ curl -X PUT localhost:1234/files/1.png --data-binary @packt.png
+Downloading 1.png on the local machine as downloaded.png is as easy as running the
+next command:
+$ curl -X GET localhost:1234/files/1.png --output downloaded.png
+If you forget to use --output, then curl(1) generates the next error message:
+Warning: Binary output can mess up your terminal. Use "--output -" to
+tell
+Warning: curl to output it to your terminal anyway, or consider
+"--output
+Warning: <FILE>" to save to a file.
+Last, if you try to download a file that cannot be found, curl(1) prints the 404 page
+not found message.
+For the previous interactions, binary.go generated the following output:
+2021/05/25 09:06:46 Creating: /tmp/files
+2021/05/25 09:06:46 Listening to :1234
+2021/05/25 09:10:21 packt.png
+2021/05/25 09:10:21 Saving to /tmp/files/packt.png
+2021/05/25 09:10:21 Bytes written: 733
+Now that we know how to create RESTful servers, download and upload files, and
+define REST APIs, it is time to learn how to document REST APIs using Swagger.
+Using Swagger for REST API
+documentation
+In this section, we discuss the documentation of a REST API. We are going to use the
+OpenAPI Specification for documenting the REST API. The OpenAPI Specification,
+which is also called the Swagger Specification, is a specification for describing,
+producing, consuming, and visualizing RESTful web services.
+
+Put simply, Swagger is a representation of your RESTful API. Swagger reads the
+appropriate code annotations and creates the OpenAPI file. To be able to document a
+REST API using Swagger, you basically have two choices. First, writing the OpenAPI
+Specification file on your own (manually), or adding annotations in the source code
+that help Swagger generate the OpenAPI Specification file for you (automatically).
+We are going to use go-swagger, which brings to Go a way of working with the
+Swagger API. The extra content for creating the documentation for the REST API
+is put in the Go source files as Go comments. The utility reads these comments and
+generates the documentation! However, all comments should follow certain rules
+and comply with the supported grammar and conventions.
+First, we need to install the go-swagger binary by following the instructions found
+at https://goswagger.io/install.html. As instructions and versions change from
+time to time, do not forget to check for updates. The instructions from the previous
+web page install the swagger binary in /usr/local/bin, which is the appropriate
+place for external binary files. However, you are free to put it elsewhere as long as
+the directory you put it in is in your PATH. After a successful installation, running
+Swagger on the command line should generate the next message, which states the
+commands that are supported by swagger:
+Please specify one command of: diff, expand, flatten, generate, init,
+mixin, serve, validate or version
+You can also get extra help for each swagger command with the --help flag. For
+example, getting help for the generate command is as simple as running swagger
+generate --help:
+$ swagger generate --help
+Usage:
+ swagger [OPTIONS] generate <command>
+generate go code for the swagger spec file
+Application Options:
+ -q, --quiet silence logs
+ --log-output=LOG-FILE redirect logs to file
+Help Options:
+ -h, --help Show this help message
+ 
+ Available commands:
+ cli generate a command line client tool from the swagger spec
+ client generate all the files for a client library
+ markdown generate a markdown representation from the swagger spec
+ model generate one or more models from the swagger spec
+ operation generate one or more server operations from the swagger
+spec
+ server generate all the files for a server application
+ spec generate a swagger spec document from a go application
+ support generate supporting files like the main function and the
+api builder
+Next, we learn how to document the REST API by adding Swagger-related metadata
+to a source file.
+Documenting the REST API
+This section teaches you how to document an existing REST API. For reasons of
+simplicity, we are going to use a relatively short file that contains handler functions.
+So, we create a new folder named swagger in the https://github.com/mactsouk/
+rest-api repository for storing the Go file with the extra Swagger information—
+in our case, we are going to create a new copy of handlers.go inside the swagger
+directory and modify it. Have in mind that as far as Go is concerned, the new version
+is still a valid Go package that can be compiled and used without any issues—it just
+contains extra Swagger-related information in Go comments.
+There is no point in displaying the entire code of the new version of handlers.go,
+which is contained in a Go package named handlers—we just present the most
+important parts of it, beginning with the preamble of the source file:
+// Package handlers for the RESTful Server
+//
+// Documentation for REST API
+//
+// Schemes: http
+// BasePath: /
+// Version: 1.0.7
+//
+// Consumes:
+// - application/json
+//
+// Produces:
+
+// - application/json
+//
+// swagger:meta
+We declare that we are communicating with data in JSON format (Consumes and
+Produces), define the version, and put in some comments that describe the general
+purpose of the package. The swagger:meta tag is what informs the swagger binary
+that this is a source file with metadata about an API. Just make sure that you do not
+forget that particular tag. Then, we present the documentation for the User structure,
+which is essential for the operation of the service and is going to be used indirectly
+by extra structures that we need to define for the purposes of documentation
+generation.
+// User defines the structure for a Full User Record
+//
+// swagger:model
+type User struct {
+ // The ID for the user
+ // in: body
+ //
+ // required: false
+ // min: 1
+ ID int `json:"id"`
+The user ID is provided by the database, which makes it a not-required field, and has
+a minimum value of 1.
+ // The Username of the user
+ // in: body
+ //
+ // required: true
+ Username string `json:"username"`
+The Username field is required.
+ // The Password of the user
+ //
+ // required: true
+ Password string `json:"password"`
+Similarly, the Password field is required.
+ // The Last Login time of the User
+ //
+ 
+ // required: true
+ // min: 0
+ LastLogin int64 `json:"lastlogin"`
+ // Is the User Admin or not
+ //
+ // required: true
+ Admin int `json:"admin"`
+ // Is the User Logged In or Not
+ //
+ // required: true
+ Active int `json:"active"`
+}
+At the end of the day, you need to add comments for all the fields of the structure.
+Next, we document the /delete endpoint along with its handler function:
+// swagger:route DELETE /delete/{id} DeleteUser deleteID
+// Delete a user given their ID.
+// The command should be issued by an admin user
+In this first part, we say that this endpoint works with the DELETE HTTP method,
+uses the /delete path, requires a parameter named id, and is going to be displayed
+as DeleteUser on screen. The last part (deleteID) allows us to define the details of
+the id parameter, which is going to be presented in a while.
+//
+// responses:
+// 200: noContent
+// 404: ErrorMessage
+In the preceding code, we define the two possible responses of the endpoint. Both are
+going to be implemented later.
+// DeleteHandler is for deleting users based on user ID
+func DeleteHandler(rw http.ResponseWriter, r *http.Request) {
+}
+The handler implementation for /delete is omitted for brevity.
+After that, we are going to document the /logged endpoint along with its handler
+function:
+
+// swagger:route GET /logged logged getUserInfo
+// Returns a list of logged in users
+//
+// responses:
+// 200: UsersResponse
+// 400: BadRequest
+This time, the first response of the handler function is called UsersResponse and is
+going to be presented in a while. If you recall, this handler returns a slice of User
+elements.
+// LoggedUsersHandler returns the list of all logged in users
+func LoggedUsersHandler(rw http.ResponseWriter, r *http.Request) {
+}
+Lastly, we need to define Go structures to represent the various inputs and results
+of an interaction—this is mainly needed for Swagger to work (you usually put these
+definitions in a separate file that is usually called docs.go). The two most important
+such Go structures are the following:
+// swagger:parameters deleteID
+type idParamWrapper struct {
+ // The user id to be deleted
+ // in: path
+ // required: true
+ ID int `json:"id"`
+}
+This one is for the /delete endpoint and defines the ID variable, which is given in
+the path, hence the in: path line. Notice the use of swagger:parameters followed by
+deleteID, which is what associates that particular structure with the documentation
+of the /delete handler function.
+// A User
+// swagger:parameters getUserInfo loggedInfo
+type UserInputWrapper struct {
+ // A list of users
+ // in: body
+ Body User
+}
+
+This time, the structure is associated with two endpoints, hence the use of both
+getUserInfo and loggedInfo. Each endpoint should be associated with a unique
+name.
+These helper structures are defined once and are the (small) price you have to pay
+for the automatic generation of the documentation. The next subsection shows how
+to create the OpenAPI file given the modified version of handlers.go.
+Generating the documentation file
+Now that we have the Go file with the Swagger metadata, we are ready to generate
+the OpenAPI file:
+$ swagger generate spec --scan-models -o ./swagger.yaml
+What the previous command does is tell swagger to generate a Swagger spec
+document from a Go application that resides in the directory where we run swagger.
+The --scan-models option tells swagger to include models that were annotated with
+swagger:model. The result of the previous command is a file named swagger.yaml,
+as specified by the -o option. Part of the contents of that file is as follows—there is
+no point in trying to understand everything in the presented output:
+ /delete/{id}:
+ delete:
+ description: |-
+ Delete a user given their ID
+ The command should be issued by an admin user
+ operationId: deleteID
+ parameters:
+ - description: The user id to be deleted
+ format: int64
+ in: path
+ name: id
+ required: true
+ type: integer
+ x-go-name: ID
+ responses:
+ "200":
+ $ref: '#/responses/noContent'
+ "404":
+ $ref: '#/responses/ErrorMessage'
+ tags:
+ - DeleteUser
+ 
+ The previous part is related to the /delete endpoint. The output says that the
+/delete endpoint requires a single parameter, which is the user ID of the user that
+is about to get deleted. The server returns HTTP code 200 on success and 404 on
+failure.
+Feel free to have a look at the full version of swagger.yaml. However, we are not
+done yet. We need to be able to serve that generated file using a web server. The
+process is illustrated in the next subsection.
+Serving the documentation file
+Before we begin the discussion about serving the Swagger file, we first need to
+discuss the use of middleware functions using a simple yet fully functional example.
+The reason for doing so is simple: the swagger tool generates a YAML file that
+needs to be properly rendered before being presented on screen. So, we use ReDoc
+(https://github.com/Redocly/redoc) to do that. However, we need the middleware
+package for hosting ReDoc sites—although the job is done transparently by the
+middleware package, it is good to know what middleware functions are and what
+they do. Middleware functions are functions with a short amount of code that
+get a request, do something with it, and pass it to another middleware or to the
+last handler function. gorilla/mux allows you to attach one or more middleware
+functions to a router using Router.Use(). If a match is found, the relevant
+middleware functions are executed in the order they were added to the router (or
+subrouter).
+The important code in middleware.go is the following:
+ mux := mux.NewRouter()
+ mux.Use(middleWare)
+ putMux := mux.Methods(http.MethodPut).Subrouter()
+ putMux.HandleFunc("/time", timeHandler)
+ getMux := mux.Methods(http.MethodGet).Subrouter()
+ getMux.HandleFunc("/add", addHandler)
+ getMux.Use(anotherMiddleWare)
+As middleWare() was added to the main router (mux.Use(middleWare)), it is always
+executed before any subrouter middleware function. Additionally, middleWare() is
+executed with all requests, whereas anotherMiddleWare() is executed for the getMux
+subrouter only
+
+Now that you have a sense of middleware functions, it is time to continue with
+the serving of swagger.yaml. As stated before, serving swagger.yaml requires the
+addition of a handler that we are going to find in an external package, which saves
+us from having to write everything from scratch. As we try to keep things simple,
+we are going to serve swagger.yaml on its own in ./swagger/serve/swagger.go using
+the /docs path. The code that follows illustrates the technique by presenting the
+implementation of the main() function:
+func main() {
+ mux := mux.NewRouter()
+ getMux := mux.Methods(http.MethodGet).Subrouter()
+ opts := middleware.RedocOpts{SpecURL: "/swagger.yaml"}
+This is where we define the options of a middleware function that is going to be used
+when serving /swagger.yaml. As discussed earlier, this middleware function renders
+the YAML code.
+ sh := middleware.Redoc(opts, nil)
+This is how we define a handler function that is based on the middleware function.
+This middleware function does not require the use of the Use() method.
+ getMux.Handle("/docs", sh)
+And now, we must associate the previous handler with /docs and we are done!
+ getMux.Handle("/swagger.yaml", http.FileServer(http.Dir("./")))
+ s := http.Server{
+ . . .
+ }
+ log.Println("Listening to", PORT)
+ err := s.ListenAndServe()
+ if err != nil {
+ log.Printf("Error starting server: %s\n", err)
+ return
+ }
+}
+The rest of the code is for defining the parameters of the server and for starting the
+server.
+
+The figure that follows shows the rendered swagger.yaml as displayed in a Firefox
+browser.
+Figure 10.1: Creating documentation for the RESTful API
+Figure 10.1 shows information about the /getid endpoint, the required payload, and
+the expected responses.
+Unfortunately, further discussion about Swagger and go-swagger is beyond the
+scope of this book—as usual, you need to experiment with the tools to create the
+desired results. The point here is that having a RESTful service without proper
+documentation is not going to be very pleasing for potential developers.
+
+Exercises
+• Include the functionality of binary.go in your own RESTful server
+• Change the restdb package to support SQLite instead of PostgreSQL
+• Change the restdb package to support MySQL instead of PostgreSQL
+• Put the handler functions from handlers.go into separate files
+Summary
+Go is widely used for developing RESTful clients and servers and this chapter
+illustrated how to program professional RESTful clients and servers in Go, and how
+to document a REST API using Swagger. Remember that defining a proper REST API
+and implementing a server and clients for it is a process that takes time and requires
+small adjustments and modifications.
+The next chapter is about code testing, benchmarking, profiling, cross-compilation,
+and creating example functions. Among other things, we are going to write code
+for testing the HTTP handlers developed in this chapter as well as creating random
+input for testing purposes.
+Additional resources • You can find more about gorilla/mux at https://github.com/gorilla/mux
+and at https://www.gorillatoolkit.org/pkg/mux
+• The go-querystring library is for encoding Go structures into URL query
+parameters: https://github.com/google/go-querystring
+• You can find more about Swagger at https://swagger.io/
+• Go Swagger 2.0: https://goswagger.io/
+• The OpenAPI Specification: https://www.openapis.org/
+• If you want to validate JSON input, have a look at the Go validator package
+at https://github.com/go-playground/validator
+• You might find the jq(1) command-line utility pretty handy when working
+with JSON records: https://stedolan.github.io/jq/ and https://jqplay.
+org/
+• You can view OpenAPI files online at https://editor.swagger.io/
+
