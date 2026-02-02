@@ -1326,4 +1326,4 @@ Additional resources
 • Wikipedia WebSocket: https://en.wikipedia.org/wiki/WebSocket
 • Gorilla WebSocket package: https://github.com/gorilla/websocket
 • Gorilla WebSocket docs: https://www.gorillatoolkit.org/pkg/websocket
-• The websocket package: https://pkg.go.dev/golang.org/x/net/websocket
+• The websocket package: https://pkg.go.dev/golang.org/x/net/websocket	
