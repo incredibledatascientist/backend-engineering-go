@@ -10,3 +10,24 @@ cal 2026/01/12 22:54:33 calculator application started.
 cal 2026/01/12 22:54:41 calculator application started.
 cal 2026/01/12 22:55:06 calculator application started.
 cal 2026/01/12 22:55:19 calculator application started.
+cal 2026/01/12 22:57:37 calculator application started.
+cal 2026/01/12 22:57:44 calculator application started.
+cal 2026/01/12 22:57:49 calculator application started.
+cal 2026/01/12 22:57:49 Invalid number: strconv.ParseFloat: parsing ".": invalid syntax
+cal 2026/01/12 22:57:53 calculator application started.
+cal 2026/01/12 22:57:53 Error: invalid number of arguments:[10 / Makefile Makefile docs bin calculator.go go.mod logs]
+cal 2026/01/12 22:57:58 calculator application started.
+cal 2026/01/12 22:57:58 Error: invalid number of arguments:[10 Makefile Makefile docs bin calculator.go go.mod logs 9]
+cal 2026/01/12 22:58:07 calculator application started.
+cal 2026/01/12 22:58:07 Error: invalid number of arguments:[10 Makefile Makefile docs bin calculator.go go.mod logs 9]
+cal 2026/01/12 22:58:17 calculator application started.
+cal 2026/01/12 22:58:17 Error: invalid number of arguments:[9 Makefile Makefile docs bin calculator.go go.mod logs 8]
+cal 2026/01/12 22:58:30 calculator application started.
+cal 2026/01/12 22:58:33 calculator application started.
+cal 2026/01/12 22:58:38 calculator application started.
+cal 2026/01/12 22:58:41 calculator application started.
+cal 2026/01/12 22:58:41 Error: invalid number of arguments:[9 Makefile Makefile docs bin calculator.go go.mod logs 8]
+cal 2026/01/12 22:58:52 calculator application started.
+cal 2026/01/12 23:00:03 calculator application started.
+cal 2026/01/12 23:00:03 Error: invalid number of arguments:[9 Makefile Makefile docs bin calculator.go go.mod logs 8]
+cal 2026/01/12 23:00:05 calculator application started.
