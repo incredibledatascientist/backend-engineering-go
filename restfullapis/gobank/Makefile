@@ -1,9 +1,12 @@
 run:
-	@go run ./main.go
+# 	@go run ./main.go
+	@go run .
+
 build:
 	go build -o bin/gobank
 
-build-run:
+run-build:
+	@go build -o bin/gobank
 	@./bin/gobank
 
 test:

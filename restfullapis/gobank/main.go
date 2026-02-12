@@ -1,7 +1,13 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func main() {
-	fmt.Println("gobank project starts...")
+
+	fmt.Println("------ main golang ----------")
+
+	server := NewAPIServer("localhost:8080")
+	server.Run()
 }
