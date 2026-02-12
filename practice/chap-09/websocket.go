@@ -1,10 +1,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -15,13 +19,20 @@ import (
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
-	CheckOrigin:     func(r *http.Request) bool { return true },
+	CheckOrigin: func(r *http.Request) bool {
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			return true
+		}
+		return strings.Contains(origin, r.Host)
+	},
 }
 
 func healthHander(w http.ResponseWriter, r *http.Request) {
 	log.Println("Serving:", r.URL.Path, "from", r.Host)
-
-	w.Write([]byte(`{"status":"ok"}`))
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(`{"status":"ok"}`))
 }
 
 func rootHander(w http.ResponseWriter, r *http.Request) {
@@ -37,9 +48,35 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Serving:", r.URL.Path, "from", r.Host)
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("upgrade error:", err)
+		return
 	}
 	defer ws.Close()
+
+	const (
+		maxMessageSize = 512
+		pongWait       = 60 * time.Second
+		pingPeriod     = (pongWait * 9) / 10
+		writeWait      = 10 * time.Second
+	)
+
+	ws.SetReadLimit(maxMessageSize)
+	_ = ws.SetReadDeadline(time.Now().Add(pongWait))
+	ws.SetPongHandler(func(string) error {
+		return ws.SetReadDeadline(time.Now().Add(pongWait))
+	})
+
+	pingTicker := time.NewTicker(pingPeriod)
+	defer pingTicker.Stop()
+
+	go func() {
+		for range pingTicker.C {
+			_ = ws.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := ws.WriteMessage(websocket.PingMessage, nil); err != nil {
+				return
+			}
+		}
+	}()
 
 	for {
 		// reading from the websocket.
@@ -53,7 +90,8 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("<--", message, " & type:", msgType)
 
 		// writing to websocket.
-		if strings.ToLower(message) == "ping" {
+		_ = ws.SetWriteDeadline(time.Now().Add(writeWait))
+		if strings.EqualFold(message, "ping") {
 			err = ws.WriteMessage(websocket.TextMessage, []byte("pong"))
 		} else {
 			err = ws.WriteMessage(msgType, msg)
@@ -89,8 +127,28 @@ func main() {
 	}
 
 	fmt.Println("Server is listening on addr:", server.Addr)
-	err := server.ListenAndServe()
-	if err != nil {
+
+	serverErr := make(chan error, 1)
+	go func() {
+		err := server.ListenAndServe()
+		if err != nil && err != http.ErrServerClosed {
+			serverErr <- err
+		}
+	}()
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+
+	select {
+	case sig := <-stop:
+		log.Println("received signal:", sig)
+	case err := <-serverErr:
 		log.Fatal(err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := server.Shutdown(ctx); err != nil {
+		log.Println("graceful shutdown failed:", err)
 	}
 }
