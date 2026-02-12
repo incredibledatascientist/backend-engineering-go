@@ -82,6 +82,8 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) {
 		// reading from the websocket.
 		msgType, msg, err := ws.ReadMessage()
 
+		// handle this error :if err == io.EOF 
+
 		if err != nil {
 			log.Println("From", r.Host, "read", err)
 			break
@@ -113,13 +115,14 @@ func websocketHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	// Just need to handle EOF error.
 	mux := http.NewServeMux()
 	mux.Handle("/", http.HandlerFunc(rootHander))
 	mux.Handle("/ws", http.HandlerFunc(websocketHandler))
 	mux.Handle("/health", http.HandlerFunc(healthHander))
 
 	server := &http.Server{
-		Addr:         "localhost:80",
+		Addr:         "localhost:8080",
 		Handler:      mux,
 		IdleTimeout:  10 * time.Second,
 		ReadTimeout:  5 * time.Second,
