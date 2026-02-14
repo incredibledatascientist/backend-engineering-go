@@ -12,19 +12,12 @@ import (
 	"github.com/gorilla/mux"
 )
 
-type APIServer struct {
-	Addr         string        `yaml:"addr"`
-	ReadTimeout  time.Duration `yaml:"read_timeout"`
-	WriteTimeout time.Duration `yaml:"write_timeout"`
-	IdleTimeout  time.Duration `yaml:"idle_timeout"`
-}
-
-func NewAPIServer(addr string, readTimeout, writeTimeout, idleTimeout time.Duration) *APIServer {
+func NewAPIServer(cfg ServerConfig) *APIServer {
 	return &APIServer{
-		Addr:         addr,
-		ReadTimeout:  readTimeout,
-		WriteTimeout: writeTimeout,
-		IdleTimeout:  idleTimeout,
+		Addr:         cfg.Addr,
+		ReadTimeout:  cfg.ReadTimeout,
+		WriteTimeout: cfg.WriteTimeout,
+		IdleTimeout:  cfg.IdleTimeout,
 	}
 }
 

@@ -2,14 +2,6 @@ package main
 
 import "fmt"
 
-type Account struct {
-	Id        int64   `json:"id"`
-	FirstName string  `json:"first_name"`
-	LastName  string  `json:"last_name"`
-	Number    string  `json:"number"`
-	Balance   float64 `json:"balance"`
-}
-
 var CUSTOMERS []Account
 
 func GenId() int64 {
