@@ -37,7 +37,6 @@ func (s *APIServer) Routes() http.Handler {
 func (s *APIServer) Run() error {
 	// Starting a new server.
 	fmt.Println("Server is listening on addr:", s.Addr)
-	s.Routes()
 	server := &http.Server{
 		Addr:         s.Addr,
 		Handler:      s.Routes(),
@@ -53,35 +52,42 @@ func (s *APIServer) Run() error {
 	return nil
 }
 
+func WriteJSON(w http.ResponseWriter, status int, v any) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(status)
+
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		log.Println("failed to encode response")
+		return
+	}
+}
+
 func (s *APIServer) defaultHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Serving:", r.URL.Path, "from", r.Host)
 
-	w.WriteHeader(http.StatusNotFound)
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, "Thanks for visiting...")
+	// w.WriteHeader(http.StatusNotFound)
+	// w.Header().Set("Content-Type", "application/json")
+	// fmt.Fprintf(w, "Thanks for visiting...")
+	WriteJSON(w, http.StatusNotFound, "Thanks for visiting...")
 }
 
 func (s *APIServer) timeHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Serving:", r.URL.Path, "from", r.Host)
 	t := time.Now().Format(time.RFC1123)
 	body := fmt.Sprintf("Current time is: %v\n", t)
-	fmt.Fprintf(w, "%s", body)
+	WriteJSON(w, http.StatusOK, body)
 }
 
 func (s *APIServer) healthHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Serving:", r.URL.Path, "from", r.Host)
-
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, `{"status":"ok"}`)
+	health := map[string]string{"status": "ok"}
+	WriteJSON(w, http.StatusOK, health)
 }
 
 func (s *APIServer) addAccountHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Serving:", r.URL.Path, "from", r.Host)
 	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "Method not allowed!|")
+		WriteJSON(w, http.StatusMethodNotAllowed, "Method not allowed!")
 		return
 	}
 
@@ -94,7 +100,7 @@ func (s *APIServer) addAccountHandler(w http.ResponseWriter, r *http.Request) {
 	var account Account
 	err = json.Unmarshal(d, &account)
 	if err != nil {
-		http.Error(w, "Error while Unmarshal", http.StatusBadRequest)
+		WriteJSON(w, http.StatusBadRequest, "Error while Unmarshaling!")
 		return
 	}
 
@@ -102,36 +108,28 @@ func (s *APIServer) addAccountHandler(w http.ResponseWriter, r *http.Request) {
 	if account.FirstName != "" && account.LastName != "" {
 		newAcc := NewAccount(account.FirstName, account.LastName, account.Balance)
 		CUSTOMERS = append(CUSTOMERS, *newAcc)
-		w.WriteHeader(http.StatusCreated)
-		w.Header().Set("Content-Type", "application/json")
+		WriteJSON(w, http.StatusCreated, "Account created successfully!")
 	} else {
-		http.Error(w, "First & Last name are required. ", http.StatusBadRequest)
+		WriteJSON(w, http.StatusBadRequest, "First & Last name are required!")
 		return
 	}
 }
 
 func (s *APIServer) getAccountHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	fmt.Println("vars:", vars)
-
 	log.Println("Serving:", r.URL.Path, "from", r.Host)
+	vars := mux.Vars(r)
+
 	if r.Method != http.MethodGet {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "Method not allowed!|")
+		WriteJSON(w, http.StatusMethodNotAllowed, "Method not allowed!")
 		return
 	}
 
 	v, ok := vars["id"]
 	var account Account
 	if ok {
-		fmt.Printf("v:%v, %T", v, v)
-
 		id, err := strconv.ParseInt(v, 10, 64)
 		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Header().Set("Content-Type", "application/json")
-			fmt.Fprintf(w, "Invalid id")
+			WriteJSON(w, http.StatusBadRequest, "Invalid id!")
 			return
 		}
 		for _, acc := range CUSTOMERS {
@@ -142,42 +140,9 @@ func (s *APIServer) getAccountHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if account.Id == 0 {
-		w.WriteHeader(http.StatusOK)
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, "Account doesn't exists!")
+		WriteJSON(w, http.StatusNotFound, "Account doesn't exists!")
 		return
 	}
 
-	accountJson, err := json.Marshal(account)
-	if err != nil {
-		http.Error(w, "Error while marshal", http.StatusBadRequest)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, "%v\n", string(accountJson))
-
-	// d, err := io.ReadAll(r.Body)
-	// if err != nil {
-	// 	http.Error(w, "Error on read", http.StatusBadRequest)
-	// 	return
-	// }
-
-	// var account Account
-	// err = json.Unmarshal(d, &account)
-
-	// if err != nil {
-	// 	http.Error(w, "Error while marshal", http.StatusBadRequest)
-	// 	return
-	// }
-
-	// log.Println("account", account)
-	// if account.FirstName != "" && account.LastName != "" {
-	// 	w.WriteHeader(http.StatusOK)
-	// 	w.Header().Set("Content-Type", "application/json")
-	// } else {
-	// 	http.Error(w, "First & Last name are required. ", http.StatusBadRequest)
-	// 	return
-	// }
+	WriteJSON(w, http.StatusOK, account)
 }
