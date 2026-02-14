@@ -13,25 +13,22 @@ import (
 )
 
 type APIServer struct {
-	Addr string `yaml:"addr"`
-	// ReadTimeout  time.Duration `yaml:"read_timeout"`
-	// WriteTimeout time.Duration `yaml:"write_timeout"`
-	// IdleTimeout  time.Duration `yaml:"idle_timeout"`
+	Addr         string        `yaml:"addr"`
+	ReadTimeout  time.Duration `yaml:"read_timeout"`
+	WriteTimeout time.Duration `yaml:"write_timeout"`
+	IdleTimeout  time.Duration `yaml:"idle_timeout"`
 }
 
-// func NewAPIServer(addr string, handler http.Handler, readTimeout, writeTimeout, idleTimeout time.Duration) *http.Server {
-func NewAPIServer(addr string) *APIServer {
-	return &APIServer{Addr: addr}
-	// return &http.Server{
-	// 	Addr: addr,
-	// Handler:      handler,
-	// ReadTimeout:  readTimeout,
-	// WriteTimeout: writeTimeout,
-	// IdleTimeout:  idleTimeout,
-	// }
+func NewAPIServer(addr string, readTimeout, writeTimeout, idleTimeout time.Duration) *APIServer {
+	return &APIServer{
+		Addr:         addr,
+		ReadTimeout:  readTimeout,
+		WriteTimeout: writeTimeout,
+		IdleTimeout:  idleTimeout,
+	}
 }
 
-func (s *APIServer) Run() {
+func (s *APIServer) Run() error {
 	router := mux.NewRouter()
 
 	router.HandleFunc("/", s.defaultHandler)
@@ -43,10 +40,21 @@ func (s *APIServer) Run() {
 
 	// Starting a new server.
 	fmt.Println("Server is listening on addr:", s.Addr)
-	err := http.ListenAndServe(s.Addr, router)
-	if err != nil {
-		log.Fatal(err)
+	// err := http.ListenAndServe(s.Addr, router) // For practice only
+
+	server := &http.Server{
+		Addr:         s.Addr,
+		Handler:      router,
+		ReadTimeout:  s.ReadTimeout,
+		WriteTimeout: s.WriteTimeout,
+		IdleTimeout:  s.IdleTimeout,
 	}
+	err := server.ListenAndServe()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *APIServer) defaultHandler(w http.ResponseWriter, r *http.Request) {
