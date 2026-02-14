@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"time"
 )
@@ -14,7 +15,14 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	server := NewAPIServer(cfg)
+	store, err := NewPostgresStore()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("store: %+v\n", store)
+
+	server := NewAPIServer(cfg, store)
 	if err := server.Run(); err != nil {
 		log.Fatal(err)
 	}

@@ -26,6 +26,7 @@ type APIServer struct {
 	Addr   string       `json:"addr"`
 	Server ServerConfig `json:"server"`
 	TLS    TLSConfig    `json:"tls"`
+	Store  Storage
 }
 
 // Account Details

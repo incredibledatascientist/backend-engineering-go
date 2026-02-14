@@ -12,12 +12,13 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func NewAPIServer(cfg ServerConfig) *APIServer {
+func NewAPIServer(cfg ServerConfig, store Storage) *APIServer {
 	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
 
 	return &APIServer{
 		Server: cfg,
 		Addr:   addr,
+		Store:  store,
 	}
 }
 
@@ -27,6 +28,7 @@ func (s *APIServer) Routes() http.Handler {
 	router.HandleFunc("/", s.defaultHandler)
 	router.HandleFunc("/time", s.timeHandler)
 	router.HandleFunc("/health", s.healthHandler)
+	router.HandleFunc("/account", s.getAccountHandler)
 	router.HandleFunc("/account/{id}", s.getAccountHandler)
 	// router.HandleFunc("/view", s.getAccountHandler)
 	router.HandleFunc("/add", s.addAccountHandler)
@@ -125,24 +127,25 @@ func (s *APIServer) getAccountHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	v, ok := vars["id"]
-	var account Account
-	if ok {
-		id, err := strconv.ParseInt(v, 10, 64)
-		if err != nil {
-			WriteJSON(w, http.StatusBadRequest, "Invalid id!")
-			return
-		}
-		for _, acc := range CUSTOMERS {
-			if acc.Id == id {
-				account = acc
-			}
-		}
-	}
-
-	if account.Id == 0 {
-		WriteJSON(w, http.StatusNotFound, "Account doesn't exists!")
+	if !ok || v == "" {
+		WriteJSON(w, http.StatusBadRequest, CUSTOMERS)
 		return
 	}
 
-	WriteJSON(w, http.StatusOK, account)
+	id, err := strconv.ParseInt(v, 10, 64)
+	if err != nil {
+		WriteJSON(w, http.StatusBadRequest, "Invalid id!")
+		return
+	}
+
+	for _, acc := range CUSTOMERS {
+		if acc.Id == id {
+			WriteJSON(w, http.StatusOK, acc)
+			return
+		}
+	}
+
+	// If we reach here → not found
+	WriteJSON(w, http.StatusNotFound, "Account doesn't exist!")
+
 }
