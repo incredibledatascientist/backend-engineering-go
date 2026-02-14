@@ -7,7 +7,8 @@ import (
 
 func main() {
 	cfg := ServerConfig{
-		Addr:         "localhost:8080",
+		Host:         "localhost",
+		Port:         8080,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  60 * time.Second,

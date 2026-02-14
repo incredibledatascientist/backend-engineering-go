@@ -13,15 +13,15 @@ import (
 )
 
 func NewAPIServer(cfg ServerConfig) *APIServer {
+	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
+
 	return &APIServer{
-		Addr:         cfg.Addr,
-		ReadTimeout:  cfg.ReadTimeout,
-		WriteTimeout: cfg.WriteTimeout,
-		IdleTimeout:  cfg.IdleTimeout,
+		Server: cfg,
+		Addr:   addr,
 	}
 }
 
-func (s *APIServer) Run() error {
+func (s *APIServer) Routes() http.Handler {
 	router := mux.NewRouter()
 
 	router.HandleFunc("/", s.defaultHandler)
@@ -31,16 +31,19 @@ func (s *APIServer) Run() error {
 	// router.HandleFunc("/view", s.getAccountHandler)
 	router.HandleFunc("/add", s.addAccountHandler)
 
+	return router
+}
+
+func (s *APIServer) Run() error {
 	// Starting a new server.
 	fmt.Println("Server is listening on addr:", s.Addr)
-	// err := http.ListenAndServe(s.Addr, router) // For practice only
-
+	s.Routes()
 	server := &http.Server{
 		Addr:         s.Addr,
-		Handler:      router,
-		ReadTimeout:  s.ReadTimeout,
-		WriteTimeout: s.WriteTimeout,
-		IdleTimeout:  s.IdleTimeout,
+		Handler:      s.Routes(),
+		ReadTimeout:  s.Server.ReadTimeout,
+		WriteTimeout: s.Server.WriteTimeout,
+		IdleTimeout:  s.Server.IdleTimeout,
 	}
 	err := server.ListenAndServe()
 	if err != nil {

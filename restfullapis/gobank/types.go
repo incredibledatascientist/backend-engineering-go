@@ -1,21 +1,31 @@
 package main
 
-import "time"
+import (
+	"time"
+)
 
 // Server Configurations
 type ServerConfig struct {
-	Addr         string
+	Host         string
+	Port         int
 	ReadTimeout  time.Duration
 	WriteTimeout time.Duration
 	IdleTimeout  time.Duration
 }
 
+// TLS/SSL Configs
+type TLSConfig struct {
+	UseTLS   bool
+	CertFile string
+	KeyFile  string
+}
+
 // APIServer Details
 type APIServer struct {
-	Addr         string        `yaml:"addr"`
-	ReadTimeout  time.Duration `yaml:"read_timeout"`
-	WriteTimeout time.Duration `yaml:"write_timeout"`
-	IdleTimeout  time.Duration `yaml:"idle_timeout"`
+	Name   string       `json:"name"`
+	Addr   string       `json:"addr"`
+	Server ServerConfig `json:"server"`
+	TLS    TLSConfig    `json:"tls"`
 }
 
 // Account Details
