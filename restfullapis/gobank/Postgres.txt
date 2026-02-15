@@ -8,12 +8,29 @@ $ docker run --name some-postgres -e POSTGRES_PASSWORD=postgres -p 5433:5432 -d 
 cmd>> netstat -ano | findstr :5433
 cmd>> docker exec -it some-postgres psql -U postgres
 
+Best Practice in PostgreSQL:
+    Always use:
+    - lowercase
+    - snake_case
+    - no double quotes
+
 psql cmd:
     - CREATE database gobank;
     - \c gobank
     - \dt
+    - \! cls [Clear]
+
+// Create and DROP database
+DROP DATABASE gobank;
+
+// postgres not support - CREATE DATABASE IF NOT EXISTS gobank;
+-> SELECT 1 FROM pg_database WHERE datname = 'gobank';
+    - 0 (Not present)
+    - 1 row (present)
+
 
 // Create Test Table
+// CASE SENSITIVE - When use Quotes
 CREATE TABLE test_users (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100),

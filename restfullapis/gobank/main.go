@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"time"
 )
@@ -20,7 +19,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Printf("store: %+v\n", store)
+	// Create table
+	err = store.createGobankTable()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	server := NewAPIServer(cfg, store)
 	if err := server.Run(); err != nil {
