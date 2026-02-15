@@ -31,9 +31,17 @@ type APIServer struct {
 
 // Account Details
 type Account struct {
-	Id        int64   `json:"id"`
+	Id        int64     `json:"id"`
+	FirstName string    `json:"first_name"`
+	LastName  string    `json:"last_name"`
+	Number    string    `json:"number"`
+	Balance   float64   `json:"balance"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// Account Details
+type AccountSchema struct {
 	FirstName string  `json:"first_name"`
 	LastName  string  `json:"last_name"`
-	Number    string  `json:"number"`
 	Balance   float64 `json:"balance"`
 }

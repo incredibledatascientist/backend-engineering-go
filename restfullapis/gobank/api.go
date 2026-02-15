@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -93,28 +92,29 @@ func (s *APIServer) addAccountHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	d, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, "Error on read", http.StatusBadRequest)
-		return
-	}
-
-	var account Account
-	err = json.Unmarshal(d, &account)
+	// var accSchema AccountSchema
+	accSchema := AccountSchema{}
+	err := json.NewDecoder(r.Body).Decode(&accSchema)
 	if err != nil {
 		WriteJSON(w, http.StatusBadRequest, "Error while Unmarshaling!")
 		return
 	}
 
-	log.Println("account", account)
-	if account.FirstName != "" && account.LastName != "" {
-		newAcc := NewAccount(account.FirstName, account.LastName, account.Balance)
-		CUSTOMERS = append(CUSTOMERS, *newAcc)
-		WriteJSON(w, http.StatusCreated, "Account created successfully!")
-	} else {
+	if accSchema.FirstName == "" || accSchema.LastName == "" {
 		WriteJSON(w, http.StatusBadRequest, "First & Last name are required!")
 		return
 	}
+	account := NewAccount(accSchema.FirstName, accSchema.LastName, accSchema.Balance)
+
+	err = s.Store.CreateAccount(account)
+	if err != nil {
+		WriteJSON(w, http.StatusBadRequest, "Create account failed!")
+		return
+	}
+
+	// Account created successfully!
+	WriteJSON(w, http.StatusCreated, account)
+
 }
 
 func (s *APIServer) getAccountHandler(w http.ResponseWriter, r *http.Request) {
@@ -128,7 +128,12 @@ func (s *APIServer) getAccountHandler(w http.ResponseWriter, r *http.Request) {
 
 	v, ok := vars["id"]
 	if !ok || v == "" {
-		WriteJSON(w, http.StatusBadRequest, CUSTOMERS)
+		accounts, err := s.Store.GetAllAccount()
+		if err != nil {
+			WriteJSON(w, http.StatusBadRequest, "Error on db query!")
+			return
+		}
+		WriteJSON(w, http.StatusOK, accounts)
 		return
 	}
 

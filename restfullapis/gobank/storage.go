@@ -66,28 +66,37 @@ func NewPostgresStore() (*PostgresStore, error) {
 // 	return nil
 // }
 
-func (p *PostgresStore) createGobankTable() error {
+func (p *PostgresStore) createAccountTable() error {
 	// CASE SENSITIVE - When use Quotes
 	// CASE IN-SENSITIVe - If not use Quotes
 	query := `
-		CREATE TABLE IF NOT EXISTS gobank (
-			id INT PRIMARY KEY,
+		CREATE TABLE IF NOT EXISTS account (
+			id SERIAL PRIMARY KEY,
 			first_name VARCHAR(255) NOT NULL,
 			last_name VARCHAR(255) NOT NULL,
 			number VARCHAR(50),
-			balance DECIMAL(10,2));
+			balance DECIMAL(10,2),
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			);
 		`
 
 	_, err := p.db.Exec(query)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
-func (p *PostgresStore) CreateAccount(*Account) error {
-	return nil
+func (p *PostgresStore) CreateAccount(acc *Account) error {
+	query := `
+		INSERT INTO account (first_name, last_name, balance, number)
+		VALUES ($1, $2, $3, $4)
+	`
+	_, err := p.db.Query(
+		query,
+		acc.FirstName,
+		acc.LastName,
+		acc.Balance,
+		acc.Number,
+	)
+	return err
 }
 
 func (p *PostgresStore) UpdateAccount(*Account) error {
@@ -103,5 +112,32 @@ func (p *PostgresStore) GetAccount(id int) (*Account, error) {
 }
 
 func (p *PostgresStore) GetAllAccount() ([]*Account, error) {
-	return nil, nil
+	// Write query params in same order as table fields
+	// Id, FirstName, LastName, Number, Balance, CreatedAt.
+
+	query := `SELECT * FROM account`
+	rows, err := p.db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+	var accounts []*Account
+	for rows.Next() {
+		acccount := &Account{}
+		err := rows.Scan(
+			&acccount.Id,
+			&acccount.FirstName,
+			&acccount.LastName,
+			&acccount.Number,
+			&acccount.Balance,
+			&acccount.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		accounts = append(accounts, acccount)
+	}
+
+	return accounts, nil
 }

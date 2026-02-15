@@ -20,7 +20,7 @@ func main() {
 	}
 
 	// Create table
-	err = store.createGobankTable()
+	err = store.createAccountTable()
 	if err != nil {
 		log.Fatal(err)
 	}

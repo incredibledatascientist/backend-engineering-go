@@ -19,6 +19,7 @@ psql cmd:
     - \c gobank
     - \dt
     - \! cls [Clear]
+    - \d+ gobank
 
 // Create and DROP database
 DROP DATABASE gobank;
@@ -37,8 +38,13 @@ CREATE TABLE test_users (
     email VARCHAR(100)
 );
 
+// Drop table
+DROP TABLE gobank;
+
 // Insert Values - Use single quotes 'string' not -> "string" [""-> invalid in sql]
 INSERT INTO test_users VALUES (1, 'Abhishek', 'abhishek@gmail.com');
 INSERT INTO test_users (id, name) VALUES (1, 'Abhi');
+
+INSERT INTO account (first_name, last_name) VALUES ('Boss', 'kumar');
 
 SELECT * FROM test_user;
