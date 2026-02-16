@@ -137,20 +137,46 @@ func (s *APIServer) getAccountHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := strconv.ParseInt(v, 10, 64)
-	if err != nil {
+	id, err := strconv.Atoi(v)
+	if err != nil || id <= 0 {
 		WriteJSON(w, http.StatusBadRequest, "Invalid id!")
 		return
 	}
 
-	for _, acc := range CUSTOMERS {
-		if acc.Id == id {
-			WriteJSON(w, http.StatusOK, acc)
-			return
-		}
+	account, err := s.Store.GetAccount(id)
+	if err != nil {
+		WriteJSON(w, http.StatusNotFound, "Account doesn't exist!")
+		return
 	}
 
-	// If we reach here → not found
-	WriteJSON(w, http.StatusNotFound, "Account doesn't exist!")
+	WriteJSON(w, http.StatusOK, account)
+}
+func (s *APIServer) deleteAccountHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("Serving:", r.URL.Path, "from", r.Host)
+	vars := mux.Vars(r)
 
+	if r.Method != http.MethodDelete {
+		WriteJSON(w, http.StatusMethodNotAllowed, "Method not allowed!")
+		return
+	}
+
+	v, ok := vars["id"]
+	if !ok || v == "" {
+		WriteJSON(w, http.StatusBadRequest, "Id not present")
+		return
+	}
+
+	id, err := strconv.Atoi(v)
+	if err != nil || id <= 0 {
+		WriteJSON(w, http.StatusBadRequest, "Invalid id!")
+		return
+	}
+
+	account, err := s.Store.GetAccount(id)
+	if err != nil {
+		WriteJSON(w, http.StatusNotFound, "Account doesn't exist!")
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, account)
 }
