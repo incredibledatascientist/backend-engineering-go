@@ -138,9 +138,9 @@ func (s *APIServer) getAccountHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := strconv.Atoi(v)
-	if err != nil || id <= 0 {
-		WriteJSON(w, http.StatusBadRequest, "Invalid id!")
+	id, err := getID(r)
+	if err != nil {
+		WriteJSON(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -154,22 +154,15 @@ func (s *APIServer) getAccountHandler(w http.ResponseWriter, r *http.Request) {
 }
 func (s *APIServer) deleteAccountHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Serving:", r.URL.Path, "from", r.Host)
-	vars := mux.Vars(r)
 
 	if r.Method != http.MethodDelete {
 		WriteJSON(w, http.StatusMethodNotAllowed, "Method not allowed!")
 		return
 	}
 
-	v, ok := vars["id"]
-	if !ok || v == "" {
-		WriteJSON(w, http.StatusBadRequest, "Id not present")
-		return
-	}
-
-	id, err := strconv.Atoi(v)
-	if err != nil || id <= 0 {
-		WriteJSON(w, http.StatusBadRequest, "Invalid id!")
+	id, err := getID(r)
+	if err != nil {
+		WriteJSON(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -179,5 +172,20 @@ func (s *APIServer) deleteAccountHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	WriteJSON(w, http.StatusNoContent, "")
+	// WriteJSON(w, http.StatusNoContent, "") // Delete successfull but no message
+	WriteJSON(w, http.StatusOK, "Account deleted successfully!")
+}
+
+func getID(r *http.Request) (int, error) {
+	vars := mux.Vars(r)
+	v, ok := vars["id"]
+	if !ok || v == "" {
+		return 0, fmt.Errorf("Id not present")
+	}
+
+	id, err := strconv.Atoi(v)
+	if err != nil || id <= 0 {
+		return 0, fmt.Errorf("Invalid id %s", v)
+	}
+	return id, nil
 }

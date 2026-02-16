@@ -105,8 +105,13 @@ func (p *PostgresStore) UpdateAccount(*Account) error {
 }
 
 func (p *PostgresStore) DeleteAccount(id int) error {
+	_, err := p.GetAccount(id)
+	if err != nil {
+		return err
+	}
+
 	query := `DELETE FROM account WHERE id=$1`
-	_, err := p.db.Query(query, id)
+	_, err = p.db.Query(query, id)
 	return err
 }
 
