@@ -29,6 +29,7 @@ func (s *APIServer) Routes() http.Handler {
 	router.HandleFunc("/health", s.healthHandler)
 	router.HandleFunc("/account", s.getAccountHandler)
 	router.HandleFunc("/account/{id}", s.getAccountHandler)
+	router.HandleFunc("/account/delete/{id}", s.deleteAccountHandler)
 	// router.HandleFunc("/view", s.getAccountHandler)
 	router.HandleFunc("/add", s.addAccountHandler)
 
@@ -172,11 +173,11 @@ func (s *APIServer) deleteAccountHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	account, err := s.Store.GetAccount(id)
+	err = s.Store.DeleteAccount(id)
 	if err != nil {
-		WriteJSON(w, http.StatusNotFound, "Account doesn't exist!")
+		WriteJSON(w, http.StatusNotFound, "Account not found")
 		return
 	}
 
-	WriteJSON(w, http.StatusOK, account)
+	WriteJSON(w, http.StatusNoContent, "")
 }
