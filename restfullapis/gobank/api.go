@@ -33,6 +33,8 @@ func (s *APIServer) Routes() http.Handler {
 	// router.HandleFunc("/view", s.getAccountHandler)
 	router.HandleFunc("/add", s.addAccountHandler)
 
+	router.HandleFunc("/transfer", s.transferAccountHandler)
+
 	return router
 }
 
@@ -188,4 +190,28 @@ func getID(r *http.Request) (int, error) {
 		return 0, fmt.Errorf("Invalid id %s", v)
 	}
 	return id, nil
+}
+
+func (s *APIServer) transferAccountHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("Serving:", r.URL.Path, "from", r.Host)
+
+	if r.Method != http.MethodPost {
+		WriteJSON(w, http.StatusMethodNotAllowed, "Method not allowed!")
+		return
+	}
+
+	// var transferSchema
+	transferSchema := TransferSchema{}
+	err := json.NewDecoder(r.Body).Decode(&transferSchema)
+	if err != nil {
+		WriteJSON(w, http.StatusBadRequest, "Error while Unmarshaling!")
+		return
+	}
+
+	if transferSchema.ToAccount == "" || transferSchema.Amount == 0 {
+		WriteJSON(w, http.StatusBadRequest, "Account number and amount are required!")
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, transferSchema)
 }

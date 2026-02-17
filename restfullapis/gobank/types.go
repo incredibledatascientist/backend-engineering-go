@@ -39,9 +39,15 @@ type Account struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-// Account Details
+// Account Schema
 type AccountSchema struct {
 	FirstName string  `json:"first_name"`
 	LastName  string  `json:"last_name"`
 	Balance   float64 `json:"balance"`
+}
+
+// Balance transfer schema
+type TransferSchema struct {
+	ToAccount string  `json:"to_account"`
+	Amount    float64 `json:"amount"`
 }

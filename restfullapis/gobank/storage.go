@@ -88,15 +88,16 @@ func (p *PostgresStore) createAccountTable() error {
 func (p *PostgresStore) CreateAccount(acc *Account) error {
 	query := `
 		INSERT INTO account (first_name, last_name, balance, number)
-		VALUES ($1, $2, $3, $4)
+		VALUES ($1, $2, $3, $4) RETURNING id
 	`
-	_, err := p.db.Query(
+	err := p.db.QueryRow(
 		query,
 		acc.FirstName,
 		acc.LastName,
 		acc.Balance,
 		acc.Number,
-	)
+	).Scan(&acc.Id)
+
 	return err
 }
 
