@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/gorilla/mux"
 )
 
@@ -33,7 +34,7 @@ func (s *APIServer) Routes() http.Handler {
 	// router.HandleFunc("/view", s.getAccountHandler)
 	router.HandleFunc("/add", s.addAccountHandler)
 
-	router.HandleFunc("/transfer", s.transferAccountHandler)
+	router.HandleFunc("/transfer", JWTAuth(s.transferAccountHandler))
 
 	return router
 }
@@ -214,4 +215,16 @@ func (s *APIServer) transferAccountHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	WriteJSON(w, http.StatusOK, transferSchema)
+}
+
+// ---------------------- JWT Authentication ----------------------
+func JWTAuth(handlerFunc http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		handlerFunc(w, r)
+		fmt.Println("JWT Authentication...!")
+	}
+}
+
+func validateJWT() (*jwt.Token, error) {
+
 }
