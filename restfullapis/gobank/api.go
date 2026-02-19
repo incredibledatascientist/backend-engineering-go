@@ -12,6 +12,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
+const (
+	SECRET = "#GOLANG"
+)
+
 func NewAPIServer(cfg ServerConfig, store Storage) *APIServer {
 	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
 
@@ -116,6 +120,14 @@ func (s *APIServer) addAccountHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tokenString, err := getJWTToken(account)
+	if err != nil {
+		WriteJSON(w, http.StatusForbidden, "JWT Token err!")
+		return
+	}
+
+	fmt.Println("TOKEN:", tokenString)
+
 	// Account created successfully!
 	WriteJSON(w, http.StatusCreated, account)
 
@@ -218,13 +230,39 @@ func (s *APIServer) transferAccountHandler(w http.ResponseWriter, r *http.Reques
 }
 
 // ---------------------- JWT Authentication ----------------------
+
 func JWTAuth(handlerFunc http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		handlerFunc(w, r)
 		fmt.Println("JWT Authentication...!")
+		tokenString := r.Header.Get("x-jwt-token")
+		fmt.Println("token:", tokenString)
+		_, err := validateJWT(tokenString)
+		if err != nil {
+			WriteJSON(w, http.StatusForbidden, "Invalid JWT Token!")
+			return
+		}
+
+		handlerFunc(w, r)
 	}
 }
 
-func validateJWT() (*jwt.Token, error) {
+func getJWTToken(account *Account) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"name":           "JWT-Token",
+		"account_number": account.Number,
+		"nbf":            time.Date(2015, 10, 10, 12, 0, 0, 0, time.UTC).Unix(),
+	})
 
+	// Sign and get the complete encoded token as a string using the secret
+	tokenString, err := token.SignedString([]byte(SECRET))
+	return tokenString, err
+
+}
+
+func validateJWT(tokenString string) (*jwt.Token, error) {
+
+	// do validation here
+	return jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
+		return []byte(SECRET), nil
+	})
 }
