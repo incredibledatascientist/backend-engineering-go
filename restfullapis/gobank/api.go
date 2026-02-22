@@ -29,12 +29,13 @@ func NewAPIServer(cfg ServerConfig, store Storage) *APIServer {
 func (s *APIServer) Routes() http.Handler {
 	router := mux.NewRouter()
 
-	router.HandleFunc("/", s.defaultHandler)
+	// router.HandleFunc("/", s.defaultHandler)
 	router.HandleFunc("/time", s.timeHandler)
 	router.HandleFunc("/health", s.healthHandler)
 	router.HandleFunc("/account", s.getAccountHandler)
 	router.HandleFunc("/account/{id}", s.getAccountHandler)
-	router.HandleFunc("/account/delete/{id}", s.deleteAccountHandler)
+	router.HandleFunc("/delete/account", s.deleteAllAccountHandler)
+	router.HandleFunc("/delete/account/{id}", s.deleteAccountHandler)
 	// router.HandleFunc("/view", s.getAccountHandler)
 	router.HandleFunc("/add", s.addAccountHandler)
 	router.HandleFunc("/transfer", JWTAuth(s.transferAccountHandler))
@@ -197,6 +198,23 @@ func (s *APIServer) deleteAccountHandler(w http.ResponseWriter, r *http.Request)
 	WriteJSON(w, http.StatusOK, "Account deleted successfully!")
 }
 
+func (s *APIServer) deleteAllAccountHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("Serving:", r.URL.Path, "from", r.Host)
+
+	if r.Method != http.MethodDelete {
+		WriteJSON(w, http.StatusMethodNotAllowed, "Method not allowed!")
+		return
+	}
+
+	err := s.Store.DeleteAllAccount()
+	if err != nil {
+		WriteJSON(w, http.StatusNotFound, "Error on delete all records.")
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, "All accounts deleted successfully!")
+}
+
 func getID(r *http.Request) (int, error) {
 	vars := mux.Vars(r)
 	v, ok := vars["id"]
@@ -287,6 +305,14 @@ func (s *APIServer) userLoginHandler(w http.ResponseWriter, r *http.Request) {
 		WriteJSON(w, http.StatusMethodNotAllowed, "Method not allowed!")
 		return
 	}
+
+	account, err := s.Store.GetAccountByNumber(req.Number)
+	if err != nil {
+		WriteJSON(w, http.StatusMethodNotAllowed, "Accound doesn't exists!")
+		return
+	}
+
+	fmt.Println("Acc:-", account)
 
 	WriteJSON(w, http.StatusOK, req)
 }
