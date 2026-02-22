@@ -1,3 +1,10 @@
+/*
+Improvements need:
+-----------------
+	1. Whenever we add any new methods we need to add in interface.
+
+*/
+
 package main
 
 import (
@@ -13,6 +20,7 @@ type Storage interface {
 	DeleteAccount(id int) error
 	GetAccount(id int) (*Account, error)
 	GetAllAccount() ([]*Account, error)
+	GetAccountByNumber(number int) (*Account, error)
 }
 
 type PostgresStore struct {
@@ -129,6 +137,21 @@ func (p *PostgresStore) GetAccount(id int) (*Account, error) {
 		return account, err
 	}
 	return nil, fmt.Errorf("Account %d not found", id)
+}
+
+func (p *PostgresStore) GetAccountByNumber(number int) (*Account, error) {
+	query := `SELECT * FROM account WHERE number=$1`
+	rows, err := p.db.Query(query, number)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		account, err := scanIntoAccount(rows)
+		return account, err
+	}
+	return nil, fmt.Errorf("Account by number [%d] not found", number)
 }
 
 func (p *PostgresStore) GetAllAccount() ([]*Account, error) {

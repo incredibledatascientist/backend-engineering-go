@@ -37,8 +37,11 @@ func (s *APIServer) Routes() http.Handler {
 	router.HandleFunc("/account/delete/{id}", s.deleteAccountHandler)
 	// router.HandleFunc("/view", s.getAccountHandler)
 	router.HandleFunc("/add", s.addAccountHandler)
-
 	router.HandleFunc("/transfer", JWTAuth(s.transferAccountHandler))
+
+	// Authenication
+	router.HandleFunc("/login", JWTAuth(s.userLoginHandler))
+	// router.HandleFunc("/logout", JWTAuth(s.userLogoutHandler))
 
 	return router
 }
@@ -100,19 +103,22 @@ func (s *APIServer) addAccountHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// var accSchema AccountSchema
-	accSchema := AccountSchema{}
-	err := json.NewDecoder(r.Body).Decode(&accSchema)
+	req := AccountSchema{}
+	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		WriteJSON(w, http.StatusBadRequest, "Error while Unmarshaling!")
 		return
 	}
 
-	if accSchema.FirstName == "" || accSchema.LastName == "" {
+	if req.FirstName == "" || req.LastName == "" {
 		WriteJSON(w, http.StatusBadRequest, "First & Last name are required!")
 		return
 	}
-	account := NewAccount(accSchema.FirstName, accSchema.LastName, accSchema.Balance)
+	account, err := NewAccount(req.FirstName, req.LastName, req.Password, req.Balance)
+	if err != nil {
+		WriteJSON(w, http.StatusBadRequest, "Error on Account creation!")
+		return
+	}
 
 	err = s.Store.CreateAccount(account)
 	if err != nil {
@@ -265,4 +271,22 @@ func validateJWT(tokenString string) (*jwt.Token, error) {
 	return jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
 		return []byte(SECRET), nil
 	})
+}
+
+// Handle User Login
+func (s *APIServer) userLoginHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("Serving:", r.URL.Path, "from", r.Host)
+	if r.Method != http.MethodPost {
+		WriteJSON(w, http.StatusMethodNotAllowed, "Method not allowed!")
+		return
+	}
+
+	var req LoginRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		WriteJSON(w, http.StatusMethodNotAllowed, "Method not allowed!")
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, req)
 }

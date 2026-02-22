@@ -1,6 +1,10 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+
+	"golang.org/x/crypto/bcrypt"
+)
 
 var CUSTOMERS []Account
 
@@ -9,11 +13,17 @@ func GenAccountNumber() string {
 	return fmt.Sprintf("%010d", count)
 }
 
-func NewAccount(firstName, lastName string, balance float64) *Account {
-	return &Account{
+func NewAccount(firstName, lastName string, password string, balance float64) (*Account, error) {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+	account := &Account{
 		FirstName: firstName,
 		LastName:  lastName,
+		Password:  string(hashedPassword),
 		Number:    "55555",
 		Balance:   balance,
 	}
+	return account, nil
 }

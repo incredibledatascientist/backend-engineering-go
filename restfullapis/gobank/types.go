@@ -35,6 +35,7 @@ type Account struct {
 	FirstName string    `json:"first_name"`
 	LastName  string    `json:"last_name"`
 	Number    string    `json:"number"`
+	Password  string    `json:"_"`
 	Balance   float64   `json:"balance"`
 	CreatedAt time.Time `json:"created_at"`
 }
@@ -43,6 +44,7 @@ type Account struct {
 type AccountSchema struct {
 	FirstName string  `json:"first_name"`
 	LastName  string  `json:"last_name"`
+	Password  string  `json:"password"`
 	Balance   float64 `json:"balance"`
 }
 
@@ -50,4 +52,19 @@ type AccountSchema struct {
 type TransferSchema struct {
 	ToAccount string  `json:"to_account"`
 	Amount    float64 `json:"amount"`
+}
+
+// User
+// type User struct {
+// 	Username  string
+// 	Password  string
+// 	FirstName string
+// 	LastName  string
+// 	email     string
+// }
+
+// Login Request
+type LoginRequest struct {
+	Number   string `json:"username"`
+	Password string `json:"password"`
 }
