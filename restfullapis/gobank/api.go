@@ -127,14 +127,6 @@ func (s *APIServer) addAccountHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokenString, err := getJWTToken(account)
-	if err != nil {
-		WriteJSON(w, http.StatusForbidden, "JWT Token err!")
-		return
-	}
-
-	fmt.Println("TOKEN:", tokenString)
-
 	// Account created successfully!
 	WriteJSON(w, http.StatusCreated, account)
 
@@ -257,9 +249,8 @@ func (s *APIServer) transferAccountHandler(w http.ResponseWriter, r *http.Reques
 
 func JWTAuth(handlerFunc http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("JWT Authentication...!")
 		tokenString := r.Header.Get("x-jwt-token")
-		fmt.Println("token:", tokenString)
+
 		_, err := validateJWT(tokenString)
 		if err != nil {
 			WriteJSON(w, http.StatusForbidden, "Invalid JWT Token!")
@@ -306,15 +297,27 @@ func (s *APIServer) userLoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println("req:", req)
-
 	account, err := s.Store.GetAccountByNumber(req.Number)
 	if err != nil {
-		WriteJSON(w, http.StatusMethodNotAllowed, "Accound doesn't exists!")
+		WriteJSON(w, http.StatusNotFound, "Accound doesn't exists!")
 		return
 	}
 
-	fmt.Println("Acc:-", account)
+	err = account.ValidatePassword(req.Password)
+	if err != nil {
+		WriteJSON(w, http.StatusBadRequest, "Invalid password!")
+		return
+	}
 
-	WriteJSON(w, http.StatusOK, req)
+	token, err := getJWTToken(account)
+	if err != nil {
+		WriteJSON(w, http.StatusBadRequest, "JWT Token err!")
+		return
+	}
+
+	var resp LoginResponse
+	resp.Number = account.Number
+	resp.Token = token
+
+	WriteJSON(w, http.StatusOK, resp)
 }

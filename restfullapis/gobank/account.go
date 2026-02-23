@@ -13,6 +13,10 @@ func GenAccountNumber() string {
 	return fmt.Sprintf("%010d", count)
 }
 
+func (acc Account) ValidatePassword(password string) error {
+	return bcrypt.CompareHashAndPassword([]byte(acc.Password), []byte(password))
+}
+
 func NewAccount(firstName, lastName string, password string, balance float64) (*Account, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
