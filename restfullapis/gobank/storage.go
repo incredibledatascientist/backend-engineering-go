@@ -84,8 +84,9 @@ func (p *PostgresStore) createAccountTable() error {
 			id SERIAL PRIMARY KEY,
 			first_name VARCHAR(255) NOT NULL,
 			last_name VARCHAR(255) NOT NULL,
-			number VARCHAR(50),
+			password VARCHAR(255),
 			balance DECIMAL(10,2),
+			number VARCHAR(50),
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 			);
 		`
@@ -94,18 +95,27 @@ func (p *PostgresStore) createAccountTable() error {
 	return err
 }
 
+func GenerateAccountNumber(id int64) string {
+	return fmt.Sprintf("%010d", id)
+}
+
 func (p *PostgresStore) CreateAccount(acc *Account) error {
 	query := `
-		INSERT INTO account (first_name, last_name, balance, number)
+		INSERT INTO account (first_name, last_name, password, balance)
 		VALUES ($1, $2, $3, $4) RETURNING id
 	`
 	err := p.db.QueryRow(
 		query,
 		acc.FirstName,
 		acc.LastName,
+		acc.Password,
 		acc.Balance,
-		acc.Number,
 	).Scan(&acc.Id)
+
+	acc.Number = GenerateAccountNumber(int64(acc.Id))
+
+	query = `UPDATE account SET number = $1 WHERE id = $2`
+	_, err = p.db.Query(query, acc.Number, acc.Id)
 
 	return err
 }
@@ -158,7 +168,7 @@ func (p *PostgresStore) GetAccountByNumber(number string) (*Account, error) {
 		account, err := scanIntoAccount(rows)
 		return account, err
 	}
-	return nil, fmt.Errorf("Account by number [%d] not found", number)
+	return nil, fmt.Errorf("Account by number [%s] not found", number)
 }
 
 func (p *PostgresStore) GetAllAccount() ([]*Account, error) {
@@ -189,8 +199,9 @@ func scanIntoAccount(rows *sql.Rows) (*Account, error) {
 		&account.Id,
 		&account.FirstName,
 		&account.LastName,
-		&account.Number,
+		&account.Password,
 		&account.Balance,
+		&account.Number,
 		&account.CreatedAt,
 	)
 

@@ -41,7 +41,7 @@ func (s *APIServer) Routes() http.Handler {
 	router.HandleFunc("/transfer", JWTAuth(s.transferAccountHandler))
 
 	// Authenication
-	router.HandleFunc("/login", JWTAuth(s.userLoginHandler))
+	router.HandleFunc("/login", s.userLoginHandler)
 	// router.HandleFunc("/logout", JWTAuth(s.userLogoutHandler))
 
 	return router
@@ -305,6 +305,8 @@ func (s *APIServer) userLoginHandler(w http.ResponseWriter, r *http.Request) {
 		WriteJSON(w, http.StatusMethodNotAllowed, "Method not allowed!")
 		return
 	}
+
+	fmt.Println("req:", req)
 
 	account, err := s.Store.GetAccountByNumber(req.Number)
 	if err != nil {

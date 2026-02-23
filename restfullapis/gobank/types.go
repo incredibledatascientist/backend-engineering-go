@@ -65,6 +65,6 @@ type TransferSchema struct {
 
 // Login Request
 type LoginRequest struct {
-	Number   string `json:"username"`
+	Number   string `json:"number"`
 	Password string `json:"password"`
 }

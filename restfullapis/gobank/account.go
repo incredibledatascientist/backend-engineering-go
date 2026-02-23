@@ -22,7 +22,6 @@ func NewAccount(firstName, lastName string, password string, balance float64) (*
 		FirstName: firstName,
 		LastName:  lastName,
 		Password:  string(hashedPassword),
-		Number:    "55555",
 		Balance:   balance,
 	}
 	return account, nil
