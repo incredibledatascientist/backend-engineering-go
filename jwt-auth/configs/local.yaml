@@ -1,0 +1,11 @@
+env: dev
+storage: postres # postgres | sqlite3 | memory
+server:
+  addr: localhost:8080
+  read_timeout: 10s
+  write_timeout: 10s
+  idle_timeout: 30s
+  tls:
+    use_tls: true
+    cert_file: ./certs/server.pem
+    key_file: ./certs/server.key

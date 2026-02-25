@@ -1,0 +1,2 @@
+- cmd> go mod init projname
+- go get github.com/gin-gonic/gin
