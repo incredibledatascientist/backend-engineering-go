@@ -30,17 +30,17 @@ func NewHTTPServer(cfg config.Config) *HTTPServer {
 }
 
 func (s *HTTPServer) Start() error {
-	log.Printf("Server is running on addr %s\n", s.server.Addr)
+	log.Printf("HTTP server started on addr %s\n", s.server.Addr)
 
 	err := s.server.ListenAndServe()
-	if err != nil && err != http.ErrServerClosed {
-		return err
+	if err != nil {
+		log.Printf("%v\n", err)
 	}
 
 	return nil
 }
 
 func (s *HTTPServer) Shutdown(ctx context.Context) error {
-	log.Println("Shutting down server...")
+	log.Println("Shutting down HTTP server...")
 	return s.server.Shutdown(ctx)
 }

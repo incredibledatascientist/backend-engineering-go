@@ -24,13 +24,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// 3Create server
+	// Create server
 	httpServer := server.NewHTTPServer(cfg)
 
 	// Start server in goroutine
 	go func() {
 		if err := httpServer.Start(); err != nil {
-			log.Printf("server error: %v\n", err)
+			log.Printf("HTTP Server error(%v)\n", err)
 		}
 	}()
 
@@ -43,8 +43,9 @@ func main() {
 	defer cancel()
 
 	if err := httpServer.Shutdown(ctx); err != nil {
-		log.Fatal(err)
+		log.Printf("HTTP Server shutdown failed: %v\n", err)
+		return
 	}
 
-	log.Println("Server exited properly")
+	log.Println("HTTP server stopped gracefully")
 }
