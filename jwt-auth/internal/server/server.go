@@ -13,28 +13,26 @@ type HTTPServer struct {
 }
 
 func NewHTTPServer(cfg config.Config) *HTTPServer {
-	// r := chi.NewRouter()
+	s := &HTTPServer{}
 
-	// register routes
-	// RegisterRoutes(r)
-
-	srv := &http.Server{
-		Addr: cfg.Server.Addr,
-		// Handler:      r,
+	s.server = &http.Server{
+		Addr:         cfg.Server.Addr,
+		Handler:      s.Routes(),
 		ReadTimeout:  cfg.Server.ReadTimeout,
 		WriteTimeout: cfg.Server.WriteTimeout,
 		IdleTimeout:  cfg.Server.IdleTimeout,
 	}
 
-	return &HTTPServer{server: srv}
+	return s
 }
 
 func (s *HTTPServer) Start() error {
 	log.Printf("HTTP server started on addr %s\n", s.server.Addr)
 
 	err := s.server.ListenAndServe()
-	if err != nil {
-		log.Printf("%v\n", err)
+	if err != nil && err != http.ErrServerClosed {
+		log.Printf("Unexpected server error: %v\n", err)
+		return err
 	}
 
 	return nil
