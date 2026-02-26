@@ -1,8 +1,7 @@
 package server
 
 import (
-	"encoding/json"
-	"fmt"
+	"jwt-auth/internal/utils"
 	"log"
 	"net/http"
 	"time"
@@ -10,40 +9,28 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func WriteJSON(w http.ResponseWriter, status int, v any) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(status)
-
-	if err := json.NewEncoder(w).Encode(v); err != nil {
-		log.Println("failed to encode response")
-		return
-	}
-}
-
 func (s *HTTPServer) defaultHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Serving:", r.URL.Path, "from", r.Host)
-	WriteJSON(w, http.StatusNotFound, "Thanks for visiting...")
+	utils.Error(w, http.StatusNotFound, "The requested endpoint does not exist", nil)
 }
 
 func (s *HTTPServer) timeHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("Serving:", r.URL.Path, "from", r.Host)
-	t := time.Now().Format(time.RFC1123)
-	body := fmt.Sprintf("Current time is: %v\n", t)
-	WriteJSON(w, http.StatusOK, body)
+	log.Printf("Serving %s from %s\n", r.URL.Path, r.Host)
+	currentTime := time.Now().Format(time.RFC1123)
+	response := map[string]string{"time": currentTime}
+	utils.Success(w, http.StatusOK, "Current time fetched successfully", response)
 }
 
 func (s *HTTPServer) healthHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("Serving:", r.URL.Path, "from", r.Host)
+	log.Printf("Serving %s from %s\n", r.URL.Path, r.Host)
 	health := map[string]string{"status": "ok"}
-	WriteJSON(w, http.StatusOK, health)
+	utils.Success(w, http.StatusOK, "Service is healthy", health)
 }
 
 func (s *HTTPServer) Routes() http.Handler {
-	router := mux.NewRouter()
-
-	// router.HandleFunc("/", s.defaultHandler)
-	router.HandleFunc("/time", s.timeHandler)
-	router.HandleFunc("/health", s.healthHandler)
-
-	return router
+	r := mux.NewRouter()
+	r.HandleFunc("/time", s.timeHandler).Methods(http.MethodGet)
+	r.HandleFunc("/health", s.healthHandler).Methods(http.MethodGet)
+	r.NotFoundHandler = http.HandlerFunc(s.defaultHandler)
+	return r
 }
