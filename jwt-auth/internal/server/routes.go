@@ -32,5 +32,12 @@ func (s *HTTPServer) Routes() http.Handler {
 	r.HandleFunc("/time", s.timeHandler).Methods(http.MethodGet)
 	r.HandleFunc("/health", s.healthHandler).Methods(http.MethodGet)
 	r.NotFoundHandler = http.HandlerFunc(s.defaultHandler)
+
+	// User Routes
+	// r.HandleFunc("/users/signup", h.SignupHandler).Methods(http.MethodPost)
+	// r.HandleFunc("/users/login", h.LoginHandler).Methods(http.MethodPost)
+	// r.HandleFunc("/users", h.GetUsersHandler).Methods(http.MethodGet)
+	// r.HandleFunc("/users/{user_id}", h.GetUserHandler).Methods(http.MethodGet)
+
 	return r
 }

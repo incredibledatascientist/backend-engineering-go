@@ -24,11 +24,17 @@ type HTTPServer struct {
 	TLS          TLSConfig     `yaml:"tls"`
 }
 
+// JWT Configs
+type JWTConfig struct {
+	Secret string `yaml:"secret"`
+}
+
 // Configurations
 type Config struct {
 	Env     string     `yaml:"env"`
 	Server  HTTPServer `yaml:"server"`
 	Storage string     `yaml:"storage"`
+	JWT     JWTConfig  `yaml:"jwt"`
 }
 
 func LoadConfig(configFile string) (Config, error) {
