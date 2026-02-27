@@ -1,0 +1,146 @@
+
+
+====================================================================
+Level-1 : — Absolute Basics
+====================================================================
+
+1. DATA, BITS, AND BYTES
+
+- Smallest unit of data is a bit.
+- A bit can store only 0 or 1.
+- 8 bits = 1 byte.
+- 1 byte can store 2^8 = 256 values (0–255).
+- All information in computers (text, images, video, IP addresses) is stored as bytes.
+- Computer hardware only understands electrical signals (on/off → 1/0).
+
+2. WHY 0–255 APPEARS EVERYWHERE
+
+- Because 1 byte = 8 bits.
+- 2^8 = 256 possible values.
+- Range = 0 to 255.
+- That is why:
+  - RGB color values are 0–255.
+  - Each IPv4 octet is 0–255.
+  - Many low-level system values use this range.
+
+3. BYTE VS ASCII
+
+- Byte = storage unit (8 bits).
+- ASCII = mapping system that assigns meaning to certain byte values.
+- Example:
+  - Byte value 65 = 01000001.
+  - ASCII says 65 represents character 'A'.
+- Byte is raw data.
+- ASCII gives it meaning as text.
+
+4. NUMBER 7 VS CHARACTER '7'
+
+- Number 7 in binary = 00000111.
+- Character '7' in ASCII = 55 decimal = 00110111.
+- 7 ≠ '7'.
+- Numbers and characters are stored differently.
+- Meaning depends on interpretation.
+
+5. UTF-8 VS ASCII
+
+- ASCII supports only 128 characters (English letters, digits, symbols).
+- UTF-8 supports almost all languages and emojis.
+- UTF-8 uses 1–4 bytes per character.
+- First 128 UTF-8 characters are identical to ASCII.
+- ASCII is a subset of UTF-8.
+
+6. HOW IMAGES ARE STORED
+
+- Image = grid of pixels.
+- Each pixel has color values.
+- Most common model: RGB.
+  - Red (1 byte)
+  - Green (1 byte)
+  - Blue (1 byte)
+- So usually 3 bytes per pixel.
+- RGBA adds 1 more byte for transparency.
+- Grayscale image uses 1 byte per pixel.
+- Image files (PNG, JPG) are structured collections of bytes interpreted by format rules.
+
+7. SAME BYTE, DIFFERENT MEANINGS
+
+- Byte 65 can mean:
+  - ASCII character 'A'
+  - Red intensity 65
+  - Audio sample value
+  - Part of file header
+- Computer only sees bytes.
+- Meaning depends on how software interprets those bytes.
+
+8. IPv4 ADDRESS EXPLANATION
+
+Example: 192.168.1.27
+
+- IPv4 address = 32 bits = 4 bytes.
+- Each part (octet) = 1 byte (0–255).
+- Binary example:
+  192 = 11000000
+  168 = 10101000
+  1   = 00000001
+  27  = 00011011
+
+- Private IP ranges:
+  - 10.0.0.0/8
+  - 172.16.0.0–172.31.255.255
+  - 192.168.0.0/16
+
+- 192.168.1.27 is typically a private IP inside a home network.
+
+9. DYNAMIC IP
+
+- Dynamic IP is automatically assigned.
+- Assigned using DHCP.
+- IP may change when reconnecting to network.
+- Static IP remains fixed.
+- ISPs also often assign dynamic public IPs.
+
+10. SUBNET MASK
+
+- Subnet mask divides IP into:
+  - Network portion
+  - Host portion
+- Example:
+  IP: 192.168.1.27
+  Mask: 255.255.255.0
+- 255.255.255.0 = 11111111.11111111.11111111.00000000
+- First 24 bits = network (/24).
+- Last 8 bits = host.
+- Total possible hosts in /24:
+  2^8 = 256 addresses
+  254 usable (excluding network and broadcast).
+
+11. WHY ONE BIT CANNOT STORE 7
+
+- 1 bit = 2 possible values (0, 1).
+- 7 requires 3 bits (111).
+- Number of possible values depends on:
+  2^number_of_bits.
+
+12. CORE PRINCIPLE LEARNED
+
+Everything in computing is:
+
+- Stored as bytes.
+- Interpreted by rules (ASCII, UTF-8, RGB, IP, PNG, etc.).
+- Meaning is not inside the byte itself.
+- Meaning comes from the system that reads it.
+
+====================================================================
+
+You now understand:
+
+- Binary fundamentals
+- Storage structure
+- Encoding systems
+- Image representation
+- IPv4 structure
+- Subnet logic
+- Why 0–255 is common
+- Interpretation vs raw data
+
+This is strong foundation-level systems thinking.

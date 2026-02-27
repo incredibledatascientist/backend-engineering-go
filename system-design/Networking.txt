@@ -1,0 +1,103 @@
+NETWORKING MASTERY ROADMAP (ORDERED)
+
+🟢 LEVEL 1 — Absolute Basics
+1. What is Data (Bits & Bytes)
+2. Binary Representation (0s and 1s)
+3. What is a Network
+4. Types of Networks (LAN, WAN, Internet)
+5. What is an IP Address (IPv4, IPv6)
+6. What is a Port
+7. IP + Port = Socket (Basic Idea)
+
+🟢 LEVEL 2 — How Data Moves
+8. What is a Packet
+9. Why Data is Divided into Packets
+10. Packet Structure (Header + Payload)
+11. What is MAC Address
+12. What is a Router
+13. What is a Switch
+14. How Routing Works
+15. DNS (Domain → IP Resolution)
+
+🟢 LEVEL 3 — Network Layers
+16. OSI Model (7 Layers Overview)
+17. TCP/IP Model (Practical Model)
+18. Encapsulation & Decapsulation
+19. Role of Each Layer (Application → Physical)
+
+🟢 LEVEL 4 — IP Protocol
+20. What is IP Protocol
+21. Best-Effort Delivery
+22. IP Header Structure
+23. Fragmentation
+24. Routing Tables
+25. Public vs Private IP
+
+🟢 LEVEL 5 — Transport Layer
+26. What is TCP
+27. What is UDP
+28. TCP vs UDP
+29. TCP Segment Structure
+30. Sequence Numbers
+31. Acknowledgment (ACK)
+32. Flow Control
+33. Congestion Control
+34. 3-Way Handshake
+35. 4-Way Termination
+
+🟢 LEVEL 6 — End-to-End Communication
+36. How Client Connects to Server
+37. What is a Socket (Practical)
+38. Listening Socket
+39. Client Socket
+40. OS Kernel & Network Stack
+41. Buffers (Send/Receive)
+42. Blocking vs Non-blocking IO
+
+🟢 LEVEL 7 — Application Protocols
+43. What is HTTP
+44. HTTP Request Structure
+45. HTTP Response Structure
+46. Stateless Nature of HTTP
+47. Keep-Alive
+48. HTTPS (TLS Basics)
+49. REST APIs
+
+🟢 LEVEL 8 — Real-Time Communication
+50. What is WebSocket
+51. HTTP Upgrade Mechanism
+52. Full-Duplex Communication
+53. Polling vs Long Polling vs WebSocket
+54. Server-Sent Events (SSE)
+
+🟢 LEVEL 9 — Advanced Networking
+55. NAT (Network Address Translation)
+56. Firewall
+57. Load Balancer
+58. Reverse Proxy
+59. CDN
+60. TCP Connection States
+61. Packet Loss & Retransmission
+62. MTU & MSS
+63. TLS Handshake
+64. Certificates & Public Key Cryptography
+
+🟢 LEVEL 10 — System & Distributed Concepts
+65. End-to-End Principle
+66. How Data Centers Work
+67. How Requests Travel Globally
+68. How Cloud Networking Works
+69. Microservices Communication
+70. gRPC
+71. Message Queues (Kafka Basics)
+72. Caching Layer (Redis Networking)
+73. Observability (Logs, Metrics, Tracing)
+
+🟢 LEVEL 11 — Kernel & Low-Level
+74. What Happens Inside OS Network Stack
+75. syscalls (read, write, accept)
+76. epoll / kqueue
+77. Zero-Copy
+78. Kernel vs User Space
+79. Network Drivers
+80. NIC (Network Interface Card)
