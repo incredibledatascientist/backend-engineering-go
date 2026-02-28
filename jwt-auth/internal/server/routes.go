@@ -1,6 +1,7 @@
 package server
 
 import (
+	h "jwt-auth/internal/domain"
 	"jwt-auth/internal/middleware"
 	"jwt-auth/internal/utils"
 	"net/http"
@@ -61,7 +62,7 @@ func (s *HTTPServer) Routes() http.Handler {
 	r.HandleFunc("/movies/{id}", h.GetMovie).Methods(http.MethodGet)
 	r.HandleFunc("/movies", h.CreateMovie).Methods(http.MethodPost)
 	r.HandleFunc("/movies/{id}", h.UpdateMovie).Methods(http.MethodPut)
-	r.HandleFunc("/movies", h.DeleteMovie).Methods(http.MethodDelete)
+	r.HandleFunc("/movies/{id}", h.DeleteMovie).Methods(http.MethodDelete)
 
 	return r
 }

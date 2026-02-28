@@ -2,25 +2,48 @@ package postgres
 
 import (
 	"database/sql"
-	"time"
 
 	_ "github.com/lib/pq"
 )
 
-func NewPostgresDB(dsn string) (*sql.DB, error) {
+type PostgresStore struct {
+	db *sql.DB
+}
+
+func NewPostgresStore() (*PostgresStore, error) {
+	// dsn := "user=postgres dbname=gobank sslmode=verify-full"
+	dsn := "user=postgres password=infierms dbname=jwtauth sslmode=disable"
+	// dsn := "postgres://postgres:infierms@localhost/gobank?sslmode=disable"
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		return nil, err
 	}
 
-	// Connection pool settings (VERY IMPORTANT in production)
-	db.SetMaxOpenConns(25)
-	db.SetMaxIdleConns(25)
-	db.SetConnMaxLifetime(5 * time.Minute)
-
 	if err := db.Ping(); err != nil {
 		return nil, err
 	}
 
-	return db, nil
+	store := &PostgresStore{db: db}
+
+	// Create table automatically
+	if err := store.CreateMovieTable(); err != nil {
+		return nil, err
+	}
+
+	return store, nil
+
+}
+
+func (p *PostgresStore) CreateMovieTable() error {
+	query := `
+		CREATE TABLE IF NOT EXISTS movie (
+			id SERIAL PRIMARY KEY,
+			title VARCHAR(255) NOT NULL,
+			year int NOT NULL,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);
+		`
+
+	_, err := p.db.Exec(query)
+	return err
 }

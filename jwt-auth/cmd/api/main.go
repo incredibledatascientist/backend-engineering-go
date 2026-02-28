@@ -11,6 +11,7 @@ import (
 
 	"jwt-auth/internal/config"
 	"jwt-auth/internal/server"
+	"jwt-auth/internal/storage"
 )
 
 func main() {
@@ -23,6 +24,14 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// Create DB store
+	_, err = storage.NewStorage(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Run migrations & create tables
 
 	// Create server
 	httpServer := server.NewHTTPServer(cfg)

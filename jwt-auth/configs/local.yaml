@@ -1,5 +1,9 @@
 env: dev
-storage: postres # postgres | sqlite3 | memory
+storage: postgres # postgres | sqlite3 | memory
+postgres:
+  username: postgres
+  password: infierms
+
 server:
   addr: localhost:8080
   read_timeout: 10s
@@ -9,5 +13,6 @@ server:
     use_tls: true
     cert_file: ./certs/server.pem
     key_file: ./certs/server.key
+
 jwt:
   secret: jwt-auth-secret

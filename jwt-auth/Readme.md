@@ -18,3 +18,5 @@ http.FileServer(http.Dir("internal/static")), // 3. Serve files from this folder
 req: /static/login.html
 Strip "/static" → becomes "/login.html"
 FileServer serves → internal/static/login.html
+
+\d movie : desc of the table
