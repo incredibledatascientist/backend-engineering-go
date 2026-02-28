@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"jwt-auth/internal/middleware"
 	"jwt-auth/internal/utils"
 	"net/http"
@@ -10,7 +11,8 @@ import (
 )
 
 func (s *HTTPServer) defaultHandler(w http.ResponseWriter, r *http.Request) {
-	utils.Error(w, http.StatusNotFound, "The requested endpoint does not exist", nil)
+	err := fmt.Sprintf("The requested endpoint (%v) does not exist", r.RequestURI)
+	utils.Error(w, http.StatusNotFound, err, nil)
 }
 
 func (s *HTTPServer) timeHandler(w http.ResponseWriter, r *http.Request) {
@@ -63,12 +65,6 @@ func (s *HTTPServer) Routes() http.Handler {
 	movieRouter.HandleFunc("/{id}", s.movieHandler.GetMovie).Methods(http.MethodGet)
 	movieRouter.HandleFunc("/{id}", s.movieHandler.UpdateMovie).Methods(http.MethodPut)
 	movieRouter.HandleFunc("/{id}", s.movieHandler.DeleteMovie).Methods(http.MethodDelete)
-
-	// r.HandleFunc("/movies", s.movieHandler.GetMovies)
-	// r.HandleFunc("/movies/{id}", s.movieHandler.GetMovie).Methods(http.MethodGet)
-	// r.HandleFunc("/movies", s.movieHandler.CreateMovie).Methods(http.MethodPost)
-	// r.HandleFunc("/movies/{id}", s.movieHandler.UpdateMovie).Methods(http.MethodPut)
-	// r.HandleFunc("/movies/{id}", s.movieHandler.DeleteMovie).Methods(http.MethodDelete)
 
 	return r
 }
