@@ -6,14 +6,18 @@ import (
 	"net/http"
 
 	"jwt-auth/internal/config"
+	"jwt-auth/internal/handler"
 )
 
 type HTTPServer struct {
-	server *http.Server
+	server       *http.Server
+	movieHandler *handler.MovieHandler
 }
 
-func NewHTTPServer(cfg config.Config) *HTTPServer {
-	s := &HTTPServer{}
+func NewHTTPServer(cfg config.Config, movieHandler *handler.MovieHandler) *HTTPServer {
+	s := &HTTPServer{
+		movieHandler: movieHandler,
+	}
 
 	s.server = &http.Server{
 		Addr:         cfg.Server.Addr,

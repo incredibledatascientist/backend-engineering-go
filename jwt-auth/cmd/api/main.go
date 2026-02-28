@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"jwt-auth/internal/config"
+	"jwt-auth/internal/handler"
 	"jwt-auth/internal/server"
 	"jwt-auth/internal/storage"
 )
@@ -26,7 +27,7 @@ func main() {
 	}
 
 	// Create DB store
-	_, err = storage.NewStorage(cfg)
+	store, err := storage.NewStorage(cfg)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -34,7 +35,8 @@ func main() {
 	// Run migrations & create tables
 
 	// Create server
-	httpServer := server.NewHTTPServer(cfg)
+	movieHandler := handler.NewMovieHandler(store)
+	httpServer := server.NewHTTPServer(cfg, movieHandler)
 
 	// Start server in goroutine
 	go func() {

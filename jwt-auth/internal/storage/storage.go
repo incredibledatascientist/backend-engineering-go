@@ -24,8 +24,9 @@ Improvements need:
 type MovieStorage interface {
 	CreateMovie(*domain.Movie) error
 	// UpdateMovie(*domain.Movie) error
-	// GetMovie(id int) (*domain.Movie, error)
-	// GetMovies() ([]*domain.Movie, error)
+	DeleteMovie(id int) error
+	GetMovie(id int) (*domain.Movie, error)
+	GetMovies() ([]*domain.Movie, error)
 }
 
 func NewStorage(cfg config.Config) (MovieStorage, error) {

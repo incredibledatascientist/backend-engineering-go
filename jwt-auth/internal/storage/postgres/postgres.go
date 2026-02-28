@@ -33,17 +33,3 @@ func NewPostgresStore() (*PostgresStore, error) {
 	return store, nil
 
 }
-
-func (p *PostgresStore) CreateMovieTable() error {
-	query := `
-		CREATE TABLE IF NOT EXISTS movie (
-			id SERIAL PRIMARY KEY,
-			title VARCHAR(255) NOT NULL,
-			year int NOT NULL,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-		);
-		`
-
-	_, err := p.db.Exec(query)
-	return err
-}
