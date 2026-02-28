@@ -4,7 +4,6 @@ import (
 	"jwt-auth/internal/middleware"
 	"jwt-auth/internal/utils"
 	"net/http"
-	"path/filepath"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -42,11 +41,10 @@ func (s *HTTPServer) Routes() http.Handler {
 	r := mux.NewRouter()
 	r.Use(middleware.Logging)
 
-	staticPath := filepath.Join("internal", "static")
-	fileServer := http.FileServer(http.Dir(staticPath))
-	r.PathPrefix("/static/").Handler(http.StripPrefix("/static", fileServer)).Methods(http.MethodGet)
-
-	r.HandleFunc("/login", s.loginHandler).Methods(http.MethodPost)
+	// staticPath := filepath.Join("internal", "static")
+	// fileServer := http.FileServer(http.Dir(staticPath))
+	// r.PathPrefix("/static/").Handler(http.StripPrefix("/static", fileServer)).Methods(http.MethodGet)
+	// r.HandleFunc("/login", s.loginHandler).Methods(http.MethodPost)
 
 	r.HandleFunc("/time", s.timeHandler).Methods(http.MethodGet)
 	r.HandleFunc("/health", s.healthHandler).Methods(http.MethodGet)
@@ -57,6 +55,13 @@ func (s *HTTPServer) Routes() http.Handler {
 	// r.HandleFunc("/users/login", h.LoginHandler).Methods(http.MethodPost)
 	// r.HandleFunc("/users", h.GetUsersHandler).Methods(http.MethodGet)
 	// r.HandleFunc("/users/{user_id}", h.GetUserHandler).Methods(http.MethodGet)
+
+	// Movie Routes
+	r.HandleFunc("/movies", h.GetMovies).Methods(http.MethodGet)
+	r.HandleFunc("/movies/{id}", h.GetMovie).Methods(http.MethodGet)
+	r.HandleFunc("/movies", h.CreateMovie).Methods(http.MethodPost)
+	r.HandleFunc("/movies/{id}", h.UpdateMovie).Methods(http.MethodPut)
+	r.HandleFunc("/movies", h.DeleteMovie).Methods(http.MethodDelete)
 
 	return r
 }
