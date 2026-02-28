@@ -1,7 +1,6 @@
 package server
 
 import (
-	"jwt-auth/internal/handler"
 	"jwt-auth/internal/middleware"
 	"jwt-auth/internal/utils"
 	"net/http"
@@ -38,34 +37,6 @@ func (s *HTTPServer) loginHandler(w http.ResponseWriter, r *http.Request) {
 	utils.Success(w, http.StatusOK, "Post request successful...!", resp)
 }
 
-func (s *HTTPServer) movieRouteHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodGet {
-		id, _ := handler.ParseIntParam(r, "id")
-		if id != 0 {
-			s.movieHandler.GetMovie(w, r)
-			return
-		} else {
-			s.movieHandler.GetMovies(w, r)
-			return
-		}
-	}
-	if r.Method == http.MethodPost {
-		s.movieHandler.CreateMovie(w, r)
-		return
-	}
-	if r.Method == http.MethodPut {
-		s.movieHandler.UpdateMovie(w, r)
-		return
-
-	}
-	if r.Method == http.MethodDelete {
-		s.movieHandler.DeleteMovie(w, r)
-		return
-	}
-
-	utils.Error(w, http.StatusMethodNotAllowed, "Method not support...!", nil)
-}
-
 func (s *HTTPServer) Routes() http.Handler {
 	r := mux.NewRouter()
 	r.Use(middleware.Logging)
@@ -86,8 +57,14 @@ func (s *HTTPServer) Routes() http.Handler {
 	// r.HandleFunc("/users/{user_id}", h.GetUserHandler).Methods(http.MethodGet)
 
 	// Movie Routes
-	r.HandleFunc("/movies", s.movieRouteHandler)
-	r.HandleFunc("/movies/{id}", s.movieRouteHandler)
+	movieRouter := r.PathPrefix("/movies").Subrouter()
+	movieRouter.HandleFunc("", s.movieHandler.GetMovies).Methods(http.MethodGet)
+	movieRouter.HandleFunc("", s.movieHandler.CreateMovie).Methods(http.MethodPost)
+	movieRouter.HandleFunc("/{id}", s.movieHandler.GetMovie).Methods(http.MethodGet)
+	movieRouter.HandleFunc("/{id}", s.movieHandler.UpdateMovie).Methods(http.MethodPut)
+	movieRouter.HandleFunc("/{id}", s.movieHandler.DeleteMovie).Methods(http.MethodDelete)
+
+	// r.HandleFunc("/movies", s.movieHandler.GetMovies)
 	// r.HandleFunc("/movies/{id}", s.movieHandler.GetMovie).Methods(http.MethodGet)
 	// r.HandleFunc("/movies", s.movieHandler.CreateMovie).Methods(http.MethodPost)
 	// r.HandleFunc("/movies/{id}", s.movieHandler.UpdateMovie).Methods(http.MethodPut)
