@@ -8,7 +8,7 @@ type Movie struct {
 	ID        int       `json:"id"`
 	Year      int       `json:"year"`
 	Title     string    `json:"title"`
-	Director  *Director `json:"director"`
+	Director  *Director `json:"director,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 }
 

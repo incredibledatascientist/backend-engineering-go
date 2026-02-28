@@ -92,3 +92,30 @@ func (p *PostgresStore) GetMovies() ([]*domain.Movie, error) {
 	return movies, nil
 
 }
+
+func (p *PostgresStore) UpdateMovie(movie *domain.Movie) (*domain.Movie, error) {
+	query := `
+		UPDATE movie  SET title = $1, year = $2 WHERE id = $3
+		RETURNING id, title, year, created_at
+	`
+
+	updated := &domain.Movie{}
+
+	err := p.db.QueryRow(
+		query,
+		movie.Title,
+		movie.Year,
+		movie.ID,
+	).Scan(
+		&updated.ID,
+		&updated.Title,
+		&updated.Year,
+		&updated.CreatedAt,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return updated, nil
+}

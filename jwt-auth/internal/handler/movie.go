@@ -66,11 +66,6 @@ func (m *MovieHandler) CreateMovie(w http.ResponseWriter, r *http.Request) {
 	utils.Success(w, http.StatusOK, "Movie created successfully", movie)
 }
 
-func (m *MovieHandler) UpdateMovie(w http.ResponseWriter, r *http.Request) {
-	response := map[string]any{"movies": domain.Movie{}}
-	utils.Success(w, http.StatusOK, "Movie updated successfully", response)
-}
-
 func (m *MovieHandler) DeleteMovie(w http.ResponseWriter, r *http.Request) {
 	id, err := ParseIntParam(r, "id")
 	if err != nil {
@@ -85,4 +80,28 @@ func (m *MovieHandler) DeleteMovie(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.Success(w, http.StatusOK, "Movie deleted successfully", nil)
+}
+
+func (m *MovieHandler) UpdateMovie(w http.ResponseWriter, r *http.Request) {
+	id, err := ParseIntParam(r, "id")
+	if err != nil {
+		utils.Error(w, http.StatusBadRequest, err.Error(), nil)
+		return
+	}
+
+	movie := &domain.Movie{}
+	if err := json.NewDecoder(r.Body).Decode(&movie); err != nil {
+		utils.Error(w, http.StatusBadRequest, "Invalid request body", nil)
+		return
+	}
+
+	movie.ID = id
+
+	movie, err = m.store.UpdateMovie(movie)
+	if err != nil {
+		utils.Error(w, http.StatusInternalServerError, "Failed to update movie", err.Error())
+		return
+	}
+
+	utils.Success(w, http.StatusOK, "Movie updated successfully", movie)
 }
