@@ -28,6 +28,7 @@ func (s *HTTPServer) healthHandler(w http.ResponseWriter, r *http.Request) {
 func (s *HTTPServer) loginHandler(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		utils.Error(w, http.StatusBadRequest, "Form parse error", nil)
+		return
 	}
 
 	username := r.FormValue("username")
@@ -43,10 +44,8 @@ func (s *HTTPServer) Routes() http.Handler {
 
 	staticPath := filepath.Join("internal", "static")
 	fileServer := http.FileServer(http.Dir(staticPath))
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static", fileServer)).Methods(http.MethodGet)
 
-	r.PathPrefix("/").Handler(fileServer).Methods(http.MethodGet)
-
-	// r.PathPrefix("/").Handler(http.StripPrefix("/", fileServer)).Methods(http.MethodGet)
 	r.HandleFunc("/login", s.loginHandler).Methods(http.MethodPost)
 
 	r.HandleFunc("/time", s.timeHandler).Methods(http.MethodGet)
