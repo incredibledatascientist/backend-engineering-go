@@ -54,3 +54,11 @@ func (s *BookStore) DeleteBook(id uint) error {
 
 	return nil
 }
+
+func (s *BookStore) UpdateBook(book *domain.Book) error {
+	if book == nil {
+		return fmt.Errorf("book is nil")
+	}
+
+	return s.db.Save(book).Error
+}

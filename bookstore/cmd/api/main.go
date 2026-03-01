@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"bookstore/internal/config"
+	"bookstore/internal/domain"
 	"bookstore/internal/server"
 	"bookstore/internal/storage"
 	"bookstore/internal/storage/postgres"
@@ -55,21 +56,20 @@ func main() {
 	}
 
 	// Initialize storage based on config
-	_, db, err := initStorage(cfg)
+	store, db, err := initStorage(cfg)
 	if err != nil {
 		log.Fatalf("failed to initialize storage: %v", err)
 	}
 
 	// Run DB migrations
-	// if db != nil {
-	// 	if err := db.AutoMigrate(&domain.Book{}); err != nil {
-	// 		log.Fatalf("migration failed: %v", err)
-	// 	}
-	// }
+	if db != nil {
+		if err := db.AutoMigrate(&domain.Book{}); err != nil {
+			log.Fatalf("migration failed: %v", err)
+		}
+	}
 
 	// Create HTTP server instance
-	// httpServer := server.NewHTTPServer(cfg, store)
-	httpServer := server.NewHTTPServer(cfg)
+	httpServer := server.NewHTTPServer(cfg, store)
 
 	// Start HTTP server in background
 	go func() {

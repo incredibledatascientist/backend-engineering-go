@@ -21,5 +21,6 @@ type BookStorage interface {
 	CreateBook(book *domain.Book) error
 	GetBooks() ([]domain.Book, error)
 	GetBook(id uint) (*domain.Book, error)
+	UpdateBook(book *domain.Book) error
 	DeleteBook(id uint) error
 }

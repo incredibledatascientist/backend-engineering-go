@@ -6,14 +6,18 @@ import (
 	"net/http"
 
 	"bookstore/internal/config"
+	"bookstore/internal/storage"
 )
 
 type HTTPServer struct {
 	server *http.Server
+	store  storage.BookStorage
 }
 
-func NewHTTPServer(cfg config.Config) *HTTPServer {
-	s := &HTTPServer{}
+func NewHTTPServer(cfg config.Config, store storage.BookStorage) *HTTPServer {
+	s := &HTTPServer{
+		store: store,
+	}
 
 	s.server = &http.Server{
 		Addr:         cfg.Server.Addr,
