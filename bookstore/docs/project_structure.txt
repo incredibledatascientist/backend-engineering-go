@@ -1,0 +1,171 @@
+PROJECT STRUCTURE (Production-Ready Minimal REST API - Go)
+----------------------------------------------------------
+go.mod
+go.sum
+Makefile
+README.md
+
+bin/
+    # Compiled binaries (ignored in git)
+
+certs/
+    server.key
+    server.pem
+    # TLS certificates (never commit real production certs)
+
+cmd/
+    api/
+        main.go
+        # Application entry point
+        # - Load config
+        # - Initialize logger
+        # - Initialize DB
+        # - Wire dependencies
+        # - Start HTTP server
+
+configs/
+    local.yaml
+    logger.yaml
+    # Environment-specific configuration files
+    # Only static config files live here
+    # No Go logic here
+
+internal/
+    # Private application code (cannot be imported outside module)
+
+    config/
+        config.go
+        # Loads YAML config
+        # Parses env variables
+        # Exposes Config struct
+
+    domain/
+        user.go
+        server.go
+        # Pure business entities
+        # No HTTP logic
+        # No DB logic
+        # Example:
+        #
+        # type User struct {
+        #     ID    int64
+        #     Email string
+        # }
+
+    auth/
+        auth.go
+        auth_test.go
+        # Authentication logic
+        # - JWT generation
+        # - Password hashing
+        # - Token validation
+        # Business-level auth logic only
+
+    repository/
+        user_repository.go
+        # Database access layer
+        # - SQL queries
+        # - ORM logic
+        # - External storage calls
+        #
+        # Example:
+        # type UserRepository interface {
+        #     Create(ctx context.Context, user *domain.User) error
+        # }
+
+    service/
+        user_service.go
+        auth_service.go
+        # Business logic layer
+        # - Validation
+        # - Use-case implementation
+        # - Calls repository
+        # - No HTTP logic
+        #
+        # Example flow:
+        # Handler → Service → Repository
+
+    handler/
+        user_handler.go
+        auth_handler.go
+        # HTTP layer
+        # - Parse request
+        # - Call service
+        # - Return JSON response
+        # No business logic here
+
+    middleware/
+        auth_middleware.go
+        logging_middleware.go
+        # HTTP middlewares
+        # - JWT verification
+        # - Logging
+        # - CORS
+        # - Rate limiting (future)
+
+    server/
+        server.go
+        routes.go
+        # HTTP server setup
+        # - Router initialization
+        # - Middleware registration
+        # - Route binding
+        # - Graceful shutdown
+        #
+        # server.go → creates http.Server
+        # routes.go → registers routes like:
+        #   r.Post("/login", authHandler.Login)
+
+------------------------------------------------------------
+
+REQUEST FLOW (Clean Architecture)
+
+HTTP Request
+    ↓
+Middleware
+    ↓
+Handler (HTTP Layer)
+    ↓
+Service (Business Logic)
+    ↓
+Repository (Data Layer)
+    ↓
+Database
+
+------------------------------------------------------------
+
+ARCHITECTURE RULES
+
+1. Handler must NOT contain business logic.
+2. Service must NOT know about HTTP.
+3. Repository must NOT know about HTTP.
+4. Domain must remain pure.
+5. No circular dependencies.
+6. Always pass context.Context.
+7. No global variables.
+8. Dependency injection through constructors.
+
+------------------------------------------------------------
+
+SCALING LATER
+
+Add database:
+    internal/repository/
+
+Add Redis:
+    internal/cache/
+
+Add Kafka:
+    internal/events/
+
+Add Workers:
+    cmd/worker/
+
+------------------------------------------------------------
+
+This structure is:
+- Minimal
+- Production-ready
+- Scalable
+- Clean Architecture aligned
+- Industry-standard for Go REST APIs

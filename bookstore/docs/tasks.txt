@@ -1,0 +1,2 @@
+1. Create same crud in single method with movieHandler() and redict from their. 
+2. Fix, need to add every method in the interface in storage

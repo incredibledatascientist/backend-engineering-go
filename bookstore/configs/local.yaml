@@ -1,0 +1,21 @@
+env: dev
+storage: postgres # postgres | sqlite3 | memory
+database:
+  host: localhost
+  port: 5432
+  name: bookstore
+  user: postgres
+  password: infierms
+  timezone: Asia/Kolkata
+  DATABASE_URL: postgres://user:pass@host:5432/dbname
+server:
+  addr: localhost:8080
+  read_timeout: 10s
+  write_timeout: 10s
+  idle_timeout: 30s
+  tls:
+    use_tls: true
+    cert_file: ./certs/server.pem
+    key_file: ./certs/server.key
+jwt:
+  secret: jwt-auth-secret
