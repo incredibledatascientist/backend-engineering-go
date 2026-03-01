@@ -11,7 +11,7 @@ import (
 var db *gorm.DB
 
 type Book struct {
-	gorm.Model         // Gives:- ID(Primary Key), CreatedAt, UpdatedAt, DeletedAt
+	gorm.Model       // Gives:- ID(Primary Key), CreatedAt, UpdatedAt, DeletedAt
 	Name        string `gorm:"" json:"name"`
 	Author      string `json:"author"`
 	Publication string `json:"publication"`

@@ -37,6 +37,7 @@ type DatabaseConfig struct {
 	User     string `yaml:"user"`
 	Password string `yaml:"password"`
 	TimeZone string `yaml:"timezone"`
+	SSLMode  string `yaml:"ssl_mode"`
 }
 
 // Configurations

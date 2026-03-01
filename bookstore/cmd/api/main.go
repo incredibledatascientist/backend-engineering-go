@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -11,51 +12,85 @@ import (
 
 	"bookstore/internal/config"
 	"bookstore/internal/server"
+	"bookstore/internal/storage"
+	"bookstore/internal/storage/postgres"
+
+	"gorm.io/gorm"
 )
 
+func initStorage(cfg config.Config) (storage.BookStorage, *gorm.DB, error) {
+	switch cfg.Storage {
+
+	case "postgres":
+		db, err := postgres.NewPostgresDB(cfg)
+		if err != nil {
+			return nil, nil, err
+		}
+		return postgres.NewBookStore(db), db, nil
+
+	// Add new storage implementations here (sqlite, memory, etc.)
+	default:
+		return nil, nil, fmt.Errorf("unsupported storage type: %s", cfg.Storage)
+	}
+}
+
 func main() {
-	// Parse flags
+
+	// Parse config file flag
 	configFile := flag.String("config", "configs/local.yaml", "Configuration file")
 	flag.Parse()
 
-	// Load config
+	// Load application configuration
 	cfg, err := config.LoadConfig(*configFile)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("failed to load config: %v", err)
 	}
 
-	// // Create DB store
-	// store, err := storage.NewStorage(cfg)
-	// if err != nil {
-	// 	log.Fatal(err)
+	// Initialize storage based on config
+	_, db, err := initStorage(cfg)
+	if err != nil {
+		log.Fatalf("failed to initialize storage: %v", err)
+	}
+
+	// Run DB migrations
+	// if db != nil {
+	// 	if err := db.AutoMigrate(&domain.Book{}); err != nil {
+	// 		log.Fatalf("migration failed: %v", err)
+	// 	}
 	// }
 
-	// Run migrations & create tables
-
-	// Create server
-	// movieHandler := handler.NewMovieHandler(store)
-	// httpServer := server.NewHTTPServer(cfg, movieHandler)
+	// Create HTTP server instance
+	// httpServer := server.NewHTTPServer(cfg, store)
 	httpServer := server.NewHTTPServer(cfg)
 
-	// Start server in goroutine
+	// Start HTTP server in background
 	go func() {
 		if err := httpServer.Start(); err != nil {
-			log.Printf("HTTP Server error(%v)\n", err)
+			log.Printf("HTTP server error: %v\n", err)
 		}
 	}()
 
-	// Graceful shutdown
+	// Listen for shutdown signals
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 	<-stop
 
+	log.Println("shutting down server...")
+
+	// Create shutdown context with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	// Shutdown HTTP server gracefully
 	if err := httpServer.Shutdown(ctx); err != nil {
-		log.Printf("HTTP Server shutdown failed: %v\n", err)
-		return
+		log.Printf("server shutdown failed: %v\n", err)
 	}
 
-	log.Println("HTTP server stopped gracefully")
+	// Close database connection
+	if db != nil {
+		sqlDB, _ := db.DB()
+		_ = sqlDB.Close()
+	}
+
+	log.Println("server stopped gracefully")
 }

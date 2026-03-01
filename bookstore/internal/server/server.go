@@ -13,9 +13,7 @@ type HTTPServer struct {
 }
 
 func NewHTTPServer(cfg config.Config) *HTTPServer {
-	s := &HTTPServer{
-		// movieHandler: movieHandler,
-	}
+	s := &HTTPServer{}
 
 	s.server = &http.Server{
 		Addr:         cfg.Server.Addr,
