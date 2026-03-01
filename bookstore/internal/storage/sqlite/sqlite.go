@@ -7,6 +7,7 @@ import (
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	_ "modernc.org/sqlite"
 )
 
 func NewSQLiteDB(cfg config.Config) (*gorm.DB, error) {

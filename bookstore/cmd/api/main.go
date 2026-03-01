@@ -14,21 +14,29 @@ import (
 	"bookstore/internal/server"
 	"bookstore/internal/storage"
 	"bookstore/internal/storage/postgres"
+	"bookstore/internal/storage/sqlite"
 
 	"gorm.io/gorm"
 )
 
 func initStorage(cfg config.Config) (storage.BookStorage, *gorm.DB, error) {
 	switch cfg.Storage {
-
-	case "postgres":
+	case config.StoragePostgres:
+		// Initialize Postgres database
 		db, err := postgres.NewPostgresDB(cfg)
 		if err != nil {
 			return nil, nil, err
 		}
 		return postgres.NewBookStore(db), db, nil
 
-	// Add new storage implementations here (sqlite, memory, etc.)
+	case config.StorageSQLite:
+		// Initialize SQLite database
+		db, err := sqlite.NewSQLiteDB(cfg)
+		if err != nil {
+			return nil, nil, err
+		}
+		return sqlite.NewBookStore(db), db, nil
+
 	default:
 		return nil, nil, fmt.Errorf("unsupported storage type: %s", cfg.Storage)
 	}

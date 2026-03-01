@@ -1,5 +1,5 @@
 env: dev
-storage: postgres # postgres | sqlite3 | memory
+storage: sqlite # postgres | sqlite | memory
 postgres:
   host: localhost
   port: 5432

@@ -1,9 +1,6 @@
 package domain
 
 import (
-	"bookstore/internal/config"
-	"fmt"
-
 	"gorm.io/gorm"
 	// "jwt-auth/internal/config"
 )
@@ -11,7 +8,7 @@ import (
 var db *gorm.DB
 
 type Book struct {
-	gorm.Model       // Gives:- ID(Primary Key), CreatedAt, UpdatedAt, DeletedAt
+	gorm.Model         // Gives:- ID(Primary Key), CreatedAt, UpdatedAt, DeletedAt
 	Name        string `gorm:"" json:"name"`
 	Author      string `json:"author"`
 	Publication string `json:"publication"`
@@ -24,17 +21,6 @@ type CreateBookRequest struct {
 }
 
 // config
-
-func init() {
-	err := config.Connect()
-	if err != nil {
-		fmt.Println("Config err book model:", err.Error())
-		return
-	}
-
-	db = config.GetDB()
-	db.AutoMigrate(&Book{})
-}
 
 // func (b *Book) CreateBook() *Book {
 // func (b *Book) CreateBook() (*Book, error) {
