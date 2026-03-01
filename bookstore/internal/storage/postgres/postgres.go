@@ -9,7 +9,7 @@ import (
 )
 
 func NewPostgresDB(cfg config.Config) (*gorm.DB, error) {
-	dbCfg := cfg.Database
+	dbCfg := cfg.Postgres
 
 	if dbCfg.Host == "" || dbCfg.Name == "" {
 		return nil, fmt.Errorf("[postgres] database configuration incomplete")

@@ -1,6 +1,6 @@
 env: dev
 storage: postgres # postgres | sqlite3 | memory
-database:
+postgres:
   host: localhost
   port: 5432
   name: bookstore
@@ -9,6 +9,8 @@ database:
   timezone: Asia/Kolkata
   ssl_mode: disable
   DATABASE_URL: postgres://user:pass@host:5432/dbname
+sqlite:
+  name: bookstore.db
 server:
   addr: localhost:8080
   read_timeout: 10s

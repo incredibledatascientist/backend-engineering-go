@@ -8,14 +8,33 @@ import (
 	"github.com/goccy/go-yaml"
 )
 
-// TLS/SSL Configs
+// Storage type definition
+type StorageType string
+
+const (
+	StoragePostgres StorageType = "postgres"
+	StorageSQLite   StorageType = "sqlite"
+	StorageMemory   StorageType = "memory"
+)
+
+// Validate storage type
+func (s StorageType) IsValid() bool {
+	switch s {
+	case StoragePostgres, StorageSQLite, StorageMemory:
+		return true
+	default:
+		return false
+	}
+}
+
+// TLS configuration
 type TLSConfig struct {
 	UseTLS   bool   `yaml:"use_tls"`
 	CertFile string `yaml:"cert_file"`
 	KeyFile  string `yaml:"key_file"`
 }
 
-// HTTPServer Configs
+// HTTP server configuration
 type HTTPServer struct {
 	Addr         string        `yaml:"addr"`
 	ReadTimeout  time.Duration `yaml:"read_timeout"`
@@ -24,13 +43,18 @@ type HTTPServer struct {
 	TLS          TLSConfig     `yaml:"tls"`
 }
 
-// JWT Configs
+// JWT configuration
 type JWTConfig struct {
 	Secret string `yaml:"secret"`
 }
 
-// DAtabase Configs
-type DatabaseConfig struct {
+// SQLite configuration
+type SQLiteConfig struct {
+	Name string `yaml:"name"`
+}
+
+// Postgres configuration
+type PostgresConfig struct {
 	Host     string `yaml:"host"`
 	Port     int    `yaml:"port"`
 	Name     string `yaml:"name"`
@@ -40,24 +64,35 @@ type DatabaseConfig struct {
 	SSLMode  string `yaml:"ssl_mode"`
 }
 
-// Configurations
+// Application configuration
 type Config struct {
 	Env      string         `yaml:"env"`
 	Server   HTTPServer     `yaml:"server"`
-	Storage  string         `yaml:"storage"`
+	Storage  StorageType    `yaml:"storage"`
 	JWT      JWTConfig      `yaml:"jwt"`
-	Database DatabaseConfig `yaml:"database"`
+	Postgres PostgresConfig `yaml:"postgres"`
+	SQLite   SQLiteConfig   `yaml:"sqlite"`
 }
 
+// Load configuration from YAML file
 func LoadConfig(configFile string) (Config, error) {
-	configBytes, err := os.ReadFile(configFile)
+
+	// Read config file
+	data, err := os.ReadFile(configFile)
 	if err != nil {
-		return Config{}, fmt.Errorf("[LoadConfig] (%v)", err)
+		return Config{}, fmt.Errorf("read config: %w", err)
 	}
-	var config Config
-	err = yaml.Unmarshal(configBytes, &config)
-	if err != nil {
-		return Config{}, fmt.Errorf("[LoadConfig] (%v)", err)
+
+	// Parse YAML
+	var cfg Config
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return Config{}, fmt.Errorf("parse config: %w", err)
 	}
-	return config, nil
+
+	// Validate storage
+	if !cfg.Storage.IsValid() {
+		return Config{}, fmt.Errorf("invalid storage type: %s", cfg.Storage)
+	}
+
+	return cfg, nil
 }

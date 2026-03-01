@@ -16,23 +16,6 @@ Improvements need:
 
 // */
 
-// func NewStorage(cfg config.Config) (MovieStorage, error) {
-// 	switch cfg.Storage {
-
-// 	case "postgres":
-// 		return postgres.NewPostgresStore()
-
-// 	// case "sqlite":
-// 	// 	return sqlite.NewSQLiteStore(cfg)
-
-// 	// case "memory":
-// 	// 	return memory.NewMemoryStore(), nil
-
-// 	default:
-// 		return nil, fmt.Errorf("unsupported storage driver: %s", cfg.Storage)
-// 	}
-// }
-
 // BookStorage Interface
 type BookStorage interface {
 	CreateBook(book *domain.Book) error
