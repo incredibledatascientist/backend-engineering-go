@@ -64,7 +64,7 @@ func main() {
 	r.HandleFunc("/weather/{city}", weatherHandler).Methods(http.MethodGet)
 
 	server := http.Server{
-		Addr:    "localhost:8888",
+		Addr:    ":8080",
 		Handler: r,
 	}
 

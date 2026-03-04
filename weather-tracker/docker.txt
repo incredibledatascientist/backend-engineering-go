@@ -1,0 +1,5 @@
+->user addr ":8080" not localhost.
+
+->docker build -t weather-api .
+->docker run -p 8080:8080 weather-api
+->docker run -p host:docker weather-api
