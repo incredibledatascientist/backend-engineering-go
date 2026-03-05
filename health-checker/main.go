@@ -7,41 +7,53 @@ import (
 	"os"
 	"time"
 
-	"github.com/urfave/cli"
+	"github.com/urfave/cli/v2"
 )
 
-func status(domain, port string) string {
-	addr := domain + ":" + port
+func checkStatus(domain, port string) string {
+	addr := net.JoinHostPort(domain, port)
 	timeout := 5 * time.Second
+
 	conn, err := net.DialTimeout("tcp", addr, timeout)
-	var status string
 	if err != nil {
-		status = fmt.Sprintf("Source: %s & Dest: %s - Is Not.", conn.LocalAddr().String(), conn.RemoteAddr())
-	} else {
-		status = fmt.Sprintf("Source: %s & Dest: %s - Is Reachable.", conn.LocalAddr().String(), conn.RemoteAddr())
+		return fmt.Sprintf("Dest: %s - Not Reachable (%v)", addr, err)
 	}
+
 	defer conn.Close()
-	return status
+
+	return fmt.Sprintf(
+		"Source: %s -> Dest: %s - Reachable",
+		conn.LocalAddr().String(),
+		conn.RemoteAddr().String(),
+	)
 }
 
 func main() {
-	app := cli.NewApp()
-	app.Name = "HealthChecker"
-	app.Usage = "Health checker for checking the health of domain."
-	app.Flags = []cli.Flag{
-		&cli.StringFlag{Name: "domain", Value: "google.com", Usage: "Domain name to check status"},
-	}
+	// go run .\main.go --port=80 --domain=pixelstat.com
+	app := &cli.App{
+		Name:  "HealthChecker",
+		Usage: "Health checker for checking the health of a domain",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:  "domain",
+				Value: "google.com",
+				Usage: "Domain name to check status",
+			},
+			&cli.StringFlag{
+				Name:  "port",
+				Value: "80",
+				Usage: "Port to check",
+			},
+		},
+		Action: func(c *cli.Context) error {
+			domain := c.String("domain")
+			port := c.String("port")
 
-	app.Action = func(c *cli.Context) error {
-		port := c.String("port")
-		if port == "" {
-			port = "80"
-		}
-		domain := c.String("domain")
-		status := status(domain, port)
+			result := checkStatus(domain, port)
 
-		fmt.Printf("Domain-%s, %s\n", domain, status)
-		return nil
+			fmt.Printf("Domain: %s\n%s\n", domain, result)
+			return nil
+		},
 	}
 
 	err := app.Run(os.Args)
