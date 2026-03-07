@@ -3,7 +3,7 @@ storage: postgres # postgres | sqlite | memory
 postgres:
   host: localhost
   port: 5432
-  name: asyncapi
+  name: jwtauth
   user: postgres
   password: infierms
   timezone: Asia/Kolkata

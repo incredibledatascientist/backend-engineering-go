@@ -60,9 +60,15 @@ func main() {
 		log.Fatalf("failed to initialize storage: %v", err)
 	}
 
-	// Run DB migrations
+	// Database migrations.
+	// In production use golang-migrate
 	if db != nil {
-		if err := db.AutoMigrate(&domain.Book{}); err != nil {
+		err := db.AutoMigrate(
+			&domain.Book{},
+			&domain.Album{},
+		)
+
+		if err != nil {
 			log.Fatalf("migration failed: %v", err)
 		}
 	}
