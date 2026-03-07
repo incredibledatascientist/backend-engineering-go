@@ -32,12 +32,19 @@ func CreateAlbums(c *gin.Context) {
 
 func GetAlbums(c *gin.Context) {
 	// albums := []Album{}
-	c.IndentedJSON(http.StatusOK, ALBUMS)
+	// c.IndentedJSON(http.StatusOK, ALBUMS)
+	c.JSON(http.StatusOK, ALBUMS)
+}
+
+func GetAlbumById(c *gin.Context) {
+	id := c.Param("id")
+	c.JSON(http.StatusOK, id)
 }
 
 func main() {
 	fmt.Println("Main program starts... Gin-Gonic")
 	r := gin.Default()
+	r.GET("/albums/:id", GetAlbumById)
 	r.GET("/albums", GetAlbums)
 	r.POST("/albums", CreateAlbums)
 	r.Run("localhost:8080")
