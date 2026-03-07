@@ -1,0 +1,24 @@
+env: dev
+storage: postgres # postgres | sqlite | memory
+postgres:
+  host: localhost
+  port: 5432
+  name: asyncapi
+  user: postgres
+  password: infierms
+  timezone: Asia/Kolkata
+  ssl_mode: disable
+  DATABASE_URL: postgres://postgres:infierms@localhost:5432/asyncapi
+sqlite:
+  name: bookstore.db
+server:
+  addr: localhost:8080
+  read_timeout: 10s
+  write_timeout: 10s
+  idle_timeout: 30s
+  tls:
+    use_tls: true
+    cert_file: ./certs/server.pem
+    key_file: ./certs/server.key
+jwt:
+  secret: jwt-auth-secret
