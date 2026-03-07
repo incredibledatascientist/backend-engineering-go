@@ -38,7 +38,8 @@ func GetAlbums(c *gin.Context) {
 
 func GetAlbumById(c *gin.Context) {
 	id := c.Param("id")
-	c.JSON(http.StatusOK, id)
+	// c.JSON(http.StatusOK, id)
+	c.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("id is :%v", id)})
 }
 
 func main() {
