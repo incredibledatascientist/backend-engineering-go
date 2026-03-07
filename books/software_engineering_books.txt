@@ -1,0 +1,3 @@
+1. Clean Code | Clear Architecture
+2. The head first design pattern
+3. Designing data intensive application
