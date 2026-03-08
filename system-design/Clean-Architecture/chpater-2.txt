@@ -1,0 +1,319 @@
+CHAPTER 2 – A TALE OF TWO VALUES
+Clean Architecture – Robert C. Martin
+
+FINAL SUMMARY & CONCLUSION
+
+
+1. SOFTWARE PROVIDES TWO TYPES OF VALUE
+
+Every software system provides two kinds of value to a business:
+
+1) Behavior (Functionality)
+2) Architecture (Structure)
+
+Most businesses understand and prioritize the first value,
+but often ignore the second.
+
+
+2. VALUE #1 – BEHAVIOR (WHAT THE SOFTWARE DOES)
+
+Behavior means the functionality provided by the system.
+
+Examples of behavior:
+
+• User registration
+• Order processing
+• Payment handling
+• Report generation
+• Notifications
+• Authentication
+
+Example backend APIs:
+
+POST /users
+POST /orders
+POST /payments
+GET /reports
+
+These features solve business problems.
+
+Businesses usually focus heavily on this value because it is
+visible and directly related to customer needs.
+
+
+3. VALUE #2 – ARCHITECTURE (HOW THE SOFTWARE IS BUILT)
+
+Architecture refers to the internal structure of the software.
+
+It includes:
+
+• Code organization
+• Module boundaries
+• Dependency management
+• Separation of responsibilities
+• System design
+
+Example architecture structure:
+
+Handler → Service → Repository → Database
+
+or
+
+/domain
+/application
+/infrastructure
+/interfaces
+
+Architecture determines:
+
+• how easy the system is to understand
+• how easy it is to modify
+• how easy it is to maintain
+• how fast new features can be added
+
+
+4. THE COMMON PROBLEM IN SOFTWARE DEVELOPMENT
+
+Most organizations prioritize behavior and ignore architecture.
+
+Typical mindset:
+
+"Add new features quickly."
+
+Example timeline:
+
+Year 1:
+User registration
+Product catalog
+Orders
+
+Year 2:
+Coupons
+Discount system
+Analytics
+
+Year 3:
+Mobile APIs
+Recommendations
+Loyalty programs
+
+Without architectural care, the system becomes:
+
+• complex
+• tightly coupled
+• difficult to modify
+
+Eventually even small changes become extremely difficult.
+
+
+5. WHAT HAPPENS WHEN ARCHITECTURE IS IGNORED
+
+If architecture is neglected:
+
+Small changes require large effort.
+
+Example requirement:
+
+"Add phone_number to user"
+
+Poor architecture might require changes in:
+
+• handlers
+• services
+• database logic
+• validation code
+• utilities
+• tests
+
+Development slows down and bugs increase.
+
+
+6. EISENHOWER MATRIX – IMPORTANT VS URGENT
+
+This chapter introduces the Eisenhower Matrix.
+
+Tasks are divided into four categories:
+
+Urgent and Important
+Urgent but Not Important
+Not Urgent but Important
+Not Urgent and Not Important
+
+Architecture improvements are usually:
+
+Important but NOT urgent.
+
+Feature requests are usually:
+
+Urgent.
+
+Because of this, teams often delay architectural work
+and focus only on urgent feature development.
+
+
+7. TECHNICAL DEBT ACCUMULATION
+
+Repeatedly prioritizing features over structure creates
+technical debt.
+
+Example quick solution:
+
+func CreateOrder() {
+    db.Insert()
+    sendEmail()
+    applyDiscount()
+    chargePayment()
+}
+
+This works quickly but mixes many responsibilities.
+
+Over time these shortcuts accumulate and damage the system.
+
+
+8. THE RESPONSIBILITY OF SOFTWARE ARCHITECTS
+
+Architects and experienced developers must protect the
+architectural value of the system.
+
+They must sometimes push back and say:
+
+"We need to improve the system structure before adding more features."
+
+Protecting architecture ensures that the system remains
+maintainable and adaptable.
+
+
+9. LONG-TERM IMPACT OF GOOD ARCHITECTURE
+
+Good architecture enables:
+
+• easier feature development
+• faster debugging
+• safer modifications
+• long-term maintainability
+
+Poor architecture leads to:
+
+• slow development
+• fragile systems
+• developer frustration
+• expensive rewrites
+
+
+10. THE CORE LESSON OF THE CHAPTER
+
+Software systems must preserve both values:
+
+1) Behavior – delivering business functionality today
+2) Architecture – enabling the system to evolve tomorrow
+
+
+FINAL ONE-SENTENCE SUMMARY
+
+Software delivers two values: the behavior that satisfies current business needs and the architecture that keeps the system flexible and maintainable for future changes.
+
+
+------------------------------------------------------------------------------
+ADDITIONAL SUMMARY – PART II: STARTING WITH THE BRICKS (PROGRAMMING PARADIGMS)
+Clean Architecture – Robert C. Martin
+
+This section explains that software architecture ultimately begins with code.
+The basic building blocks ("bricks") of software are programming paradigms.
+
+A programming paradigm is a disciplined way of writing and organizing programs.
+It provides rules that help developers control complexity and structure software
+in a reliable and maintainable way.
+
+Modern software development is primarily based on three major paradigms:
+
+1) Structured Programming
+2) Object-Oriented Programming
+3) Functional Programming
+
+
+1. STRUCTURED PROGRAMMING
+
+Structured programming was introduced by Edsger Dijkstra in 1968.
+
+Before structured programming, programs often used unrestricted "goto"
+statements that caused code to jump to many different places. This created
+spaghetti code that was extremely difficult to understand and maintain.
+
+Structured programming introduced disciplined control flow using constructs like:
+
+• if / else
+• loops (for, while)
+• functions
+
+These constructs replaced uncontrolled jumps and made programs easier to
+reason about.
+
+Key idea:
+
+Structured programming imposes discipline on the direct transfer of control.
+
+
+2. OBJECT-ORIENTED PROGRAMMING (OOP)
+
+Object-oriented programming introduced concepts such as:
+
+• encapsulation
+• inheritance
+• polymorphism
+
+However, from an architectural perspective, the most important benefit of
+object-oriented programming is the ability to control source code dependencies.
+
+Through techniques like interfaces and polymorphism, architects can arrange
+dependencies so that high-level business rules do not depend on low-level
+details such as databases or user interfaces.
+
+This allows systems to be more flexible and easier to modify.
+
+Key idea:
+
+Object-oriented programming imposes discipline on indirect transfer of control
+and allows architects to control dependency direction.
+
+
+3. FUNCTIONAL PROGRAMMING
+
+Functional programming is based on mathematical concepts and emphasizes
+immutability.
+
+Its core idea is minimizing mutable state and side effects.
+
+Instead of modifying variables repeatedly, functions receive input values
+and return new output values.
+
+Benefits include:
+
+• more predictable behavior
+• fewer concurrency problems
+• easier reasoning about code
+
+Key idea:
+
+Functional programming imposes discipline on state mutation.
+
+
+4. THE COMMON PATTERN ACROSS PARADIGMS
+
+Each programming paradigm restricts certain behaviors in order to improve
+software quality:
+
+Structured Programming → restricts uncontrolled jumps in code.
+
+Object-Oriented Programming → restricts uncontrolled dependencies between modules.
+
+Functional Programming → restricts uncontrolled mutation of data.
+
+By limiting these freedoms, paradigms help developers build systems that are
+more understandable, maintainable, and reliable.
+
+
+FINAL IDEA
+
+Programming paradigms act as the fundamental "bricks" of software architecture.
+They provide the discipline required to structure code, manage dependencies,
+and control complexity in large software systems.

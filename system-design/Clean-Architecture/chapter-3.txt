@@ -1,0 +1,143 @@
+CHAPTER 3 – PARADIGM OVERVIEW
+Clean Architecture – Robert C. Martin
+
+FINAL SUMMARY & CONCLUSION
+
+
+1. WHAT IS A PROGRAMMING PARADIGM
+
+A programming paradigm is a fundamental style or discipline for writing
+programs. It defines how programmers structure logic, organize code,
+and control complexity.
+
+Programming paradigms act as the foundational rules that guide how
+software is written and how systems evolve over time.
+
+Software architecture is built on top of these paradigms because
+architecture ultimately begins with code.
+
+
+2. THE THREE MAJOR PROGRAMMING PARADIGMS
+
+Modern software development has been shaped by three major programming
+paradigms:
+
+1) Structured Programming
+2) Object-Oriented Programming
+3) Functional Programming
+
+Each paradigm introduced a new discipline that improved the reliability,
+maintainability, and structure of software systems.
+
+
+3. STRUCTURED PROGRAMMING
+
+Structured programming was introduced by Edsger Dijkstra in 1968.
+
+Before structured programming, programs often used unrestricted "goto"
+statements that allowed execution to jump to many different parts of the
+program. This resulted in chaotic "spaghetti code" that was extremely
+difficult to understand and maintain.
+
+Structured programming replaced uncontrolled jumps with structured
+control flow constructs such as:
+
+• if / else statements
+• loops (for, while)
+• functions and procedures
+
+These constructs create predictable execution paths and make programs
+easier to analyze and reason about.
+
+Key principle:
+
+Structured programming imposes discipline on the direct transfer
+of control in programs.
+
+
+4. OBJECT-ORIENTED PROGRAMMING (OOP)
+
+Object-oriented programming was introduced in the 1960s and popularized
+later through languages such as C++, Java, and others.
+
+OOP introduced concepts such as:
+
+• encapsulation
+• inheritance
+• polymorphism
+
+From an architectural perspective, the most important capability of OOP
+is the ability to control source code dependencies.
+
+Using interfaces and polymorphism, architects can ensure that
+high-level business rules do not depend on low-level implementation
+details such as databases, frameworks, or user interfaces.
+
+This enables systems to be flexible and adaptable to change.
+
+Key principle:
+
+Object-oriented programming imposes discipline on indirect transfer
+of control and allows architects to control dependency direction.
+
+
+5. FUNCTIONAL PROGRAMMING
+
+Functional programming originates from mathematical concepts such as
+lambda calculus.
+
+The main focus of functional programming is minimizing mutable state
+and avoiding side effects.
+
+Instead of modifying existing variables repeatedly, functions receive
+input values and return new output values.
+
+Key characteristics include:
+
+• immutable data
+• pure functions
+• predictable behavior
+
+This paradigm reduces many types of bugs, especially those related
+to concurrency and shared state.
+
+Key principle:
+
+Functional programming imposes discipline on data mutation.
+
+
+6. THE COMMON PATTERN ACROSS ALL PARADIGMS
+
+Each programming paradigm improves software by restricting certain
+dangerous freedoms that programmers once had.
+
+Structured Programming
+→ Restricts uncontrolled jumps in program control flow.
+
+Object-Oriented Programming
+→ Restricts uncontrolled dependencies between modules.
+
+Functional Programming
+→ Restricts uncontrolled mutation of data.
+
+
+7. WHY THESE PARADIGMS MATTER FOR ARCHITECTURE
+
+These paradigms provide the discipline necessary for building
+large, reliable software systems.
+
+They help engineers control:
+
+• program flow
+• system dependencies
+• data mutation
+
+By enforcing these disciplines, programming paradigms form the
+foundational building blocks ("bricks") of software architecture.
+
+
+FINAL ONE-SENTENCE SUMMARY
+
+Programming paradigms provide the fundamental disciplines that restrict
+dangerous freedoms in programming, enabling developers to build software
+systems that are more structured, maintainable, and reliable.
