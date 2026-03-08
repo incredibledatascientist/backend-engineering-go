@@ -40,6 +40,7 @@ func main() {
 
 	// User Routes
 	router.POST("/users/signup", handlers.UserSignup)
+	router.POST("/users/login", handlers.UserLogin)
 
 	fmt.Println("Server is running on addr: localhost:8080")
 	router.Run("localhost:8080")
