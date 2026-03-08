@@ -13,33 +13,12 @@ import (
 	"gorm.io/gorm"
 )
 
-func initDatabase() (*gorm.DB, error) {
-	postgres := database.PostgresConfig{
-		Name:     "ginjwtauth",
-		Port:     5432,
-		Host:     "localhost",
-		User:     "postgres",
-		Password: "infierms",
-		TimeZone: "Asia/Kolkata",
-		SSLMode:  "disable",
-	}
-
-	db, err := database.NewPostgresDB(database.Config{
-		Postgres: postgres,
-	})
-	
-	fmt.Println("db:", db)
-	if err != nil {
-		return nil, err
-	}
-
-	return db, nil
-}
+var Initdb *gorm.DB
 
 func main() {
 
 	// Initialize database
-	db, err := initDatabase()
+	db, err := database.InitDatabase()
 	if err != nil {
 		log.Fatalf("failed to initialize database: %v", err)
 	}
@@ -50,14 +29,17 @@ func main() {
 			log.Fatalf("migration failed: %v", err)
 		}
 	}
-	fmt.Println("db:", db)
 
-	router := gin.New()
-	router.Use(gin.Logger())
+	// router := gin.New()
+	// router.Use(gin.Logger())
+	router := gin.Default()
 
 	// routes.
+	// router.GET("/api/v1/health", handlers.HealthHandler) // API Versioning.
+	router.GET("/health", handlers.HealthHandler)
 
-	router.GET("/api/v1/health", handlers.HealthHandler)
+	// User Routes
+	router.POST("/users/signup", handlers.UserSignup)
 
 	fmt.Println("Server is running on addr: localhost:8080")
 	router.Run("localhost:8080")

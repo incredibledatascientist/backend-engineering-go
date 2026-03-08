@@ -73,3 +73,34 @@ func NewPostgresDB(cfg Config) (*gorm.DB, error) {
 
 	return db, nil
 }
+
+func InitDatabase() (*gorm.DB, error) {
+	postgres := PostgresConfig{
+		Name:     "ginjwtauth",
+		Port:     5432,
+		Host:     "localhost",
+		User:     "postgres",
+		Password: "infierms",
+		TimeZone: "Asia/Kolkata",
+		SSLMode:  "disable",
+	}
+
+	db, err := NewPostgresDB(Config{
+		Postgres: postgres,
+	})
+
+	fmt.Println("db:", db)
+	if err != nil {
+		return nil, err
+	}
+
+	initDB = db // for temp
+
+	return db, nil
+}
+
+var initDB *gorm.DB
+
+func GetDB() *gorm.DB {
+	return initDB
+}
