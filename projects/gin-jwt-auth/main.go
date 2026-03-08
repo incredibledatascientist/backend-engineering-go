@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"gin-jwt-auth/database"
 	"gin-jwt-auth/handlers"
+	"gin-jwt-auth/middleware"
 	"gin-jwt-auth/models"
 	"log"
 
@@ -41,6 +42,7 @@ func main() {
 	// User Routes
 	router.POST("/users/signup", handlers.UserSignup)
 	router.POST("/users/login", handlers.UserLogin)
+	router.GET("/users", middleware.Authenticate, handlers.GetUsers)
 
 	fmt.Println("Server is running on addr: localhost:8080")
 	router.Run("localhost:8080")

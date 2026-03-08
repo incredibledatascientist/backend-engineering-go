@@ -6,8 +6,10 @@ import (
 	"gin-jwt-auth/database"
 	"gin-jwt-auth/models"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -16,6 +18,8 @@ import (
 
 // }
 // func VerifyPassword()
+
+var JWT_SECRET = "master@golang"
 
 func UserSignup(c *gin.Context) {
 	req := models.UserReq{}
@@ -73,12 +77,49 @@ func UserLogin(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"user": user})
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"user_id":     user.ID,
+		"expiry_time": time.Now().Add(5 * time.Minute).Unix(),
+	})
+
+	// Sign and get the complete encoded token as a string using the secret
+	tokenString, err := token.SignedString([]byte(JWT_SECRET))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Set cookies
+	c.SetSameSite(http.SameSiteLaxMode)
+	c.SetCookie("Authorization", tokenString, 10*60, "", "", false, true)
+
+	c.JSON(http.StatusOK, gin.H{"access_token": tokenString})
 }
 
-// func GetUsers(c *gin.Context) {
+func GetUsers(c *gin.Context) {
+	fmt.Println("----- get user:")
+	db := database.GetDB()
+	ctx := context.Background()
+	users, err := gorm.G[models.User](db).Find(ctx)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		return
+	}
 
-// }
+	c.JSON(http.StatusOK, gin.H{"users": users})
+}
+
+func GetUser(id uint) (*models.User, error) {
+	db := database.GetDB()
+	ctx := context.Background()
+	user, err := gorm.G[models.User](db).Where("id = ?", id).First(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+
+}
 
 // func GetUser(c *gin.Context) {
 
