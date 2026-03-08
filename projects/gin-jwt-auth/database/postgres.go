@@ -1,35 +1,75 @@
 package database
 
 import (
-	"database/sql"
+	"fmt"
 
-	_ "github.com/lib/pq"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
-type PostgresStore struct {
-	db *sql.DB
+// Postgres configuration
+type PostgresConfig struct {
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	Name     string `yaml:"name"`
+	User     string `yaml:"user"`
+	Password string `yaml:"password"`
+	TimeZone string `yaml:"timezone"`
+	SSLMode  string `yaml:"ssl_mode"`
 }
 
-func NewPostgresStore() (*PostgresStore, error) {
-	// dsn := "user=postgres dbname=gobank sslmode=verify-full"
-	dsn := "user=postgres password=infierms dbname=jwtauth sslmode=disable"
-	// dsn := "postgres://postgres:infierms@localhost/gobank?sslmode=disable"
-	db, err := sql.Open("postgres", dsn)
+// Application configuration
+type Config struct {
+	// Env      string         `yaml:"env"`
+	// Server   HTTPServer     `yaml:"server"`
+	// Storage  StorageType    `yaml:"storage"`
+	// JWT      JWTConfig      `yaml:"jwt"`
+	// SQLite   SQLiteConfig   `yaml:"sqlite"`
+	Postgres PostgresConfig `yaml:"postgres"`
+}
+
+func NewPostgresDB(cfg Config) (*gorm.DB, error) {
+	dbCfg := cfg.Postgres
+
+	if dbCfg.Host == "" || dbCfg.Name == "" {
+		return nil, fmt.Errorf("[postgres] database configuration incomplete")
+	}
+
+	sslMode := dbCfg.SSLMode
+	if sslMode == "" {
+		sslMode = "disable"
+	}
+
+	dsn := fmt.Sprintf(
+		"host=%s user=%s password=%s dbname=%s port=%d sslmode=%s TimeZone=%s",
+		dbCfg.Host,
+		dbCfg.User,
+		dbCfg.Password,
+		dbCfg.Name,
+		dbCfg.Port,
+		sslMode,
+		dbCfg.TimeZone,
+	)
+
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		// SingularTable: true -> user [not users]
+		// NamingStrategy: schema.NamingStrategy{
+		// 	SingularTable: true,
+		// },
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	if err := db.Ping(); err != nil {
-		return nil, err
-	}
-
-	store := &PostgresStore{db: db}
-
-	// Create table automatically
-	// if err := store.CreateMovieTable(); err != nil {
+	// Connection Pooling
+	// sqlDB, err := db.DB()
+	// if err != nil {
 	// 	return nil, err
 	// }
 
-	return store, nil
+	// sqlDB.SetMaxOpenConns(25)
+	// sqlDB.SetMaxIdleConns(10)
+	// sqlDB.SetConnMaxLifetime(time.Hour)
 
+	return db, nil
 }

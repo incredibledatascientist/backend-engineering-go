@@ -1,11 +1,5 @@
 package utils
 
-import (
-	"gin-jwt-auth/models"
+// func CheckUserRole(c *gin.Context, role models.UserRole) error {
 
-	"github.com/gin-gonic/gin"
-)
-
-func CheckUserRole(c *gin.Context, role models.UserRole) error {
-
-}
+// }
