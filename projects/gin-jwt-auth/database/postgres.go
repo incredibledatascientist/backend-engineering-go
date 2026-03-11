@@ -89,7 +89,6 @@ func InitDatabase() (*gorm.DB, error) {
 		Postgres: postgres,
 	})
 
-	fmt.Println("db:", db)
 	if err != nil {
 		return nil, err
 	}

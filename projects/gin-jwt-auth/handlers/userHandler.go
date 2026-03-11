@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -20,6 +21,7 @@ import (
 // func VerifyPassword()
 
 var JWT_SECRET = "master@golang"
+var validate = validator.New()
 
 func UserSignup(c *gin.Context) {
 	req := models.UserReq{}
@@ -57,6 +59,12 @@ func UserSignup(c *gin.Context) {
 func UserLogin(c *gin.Context) {
 	req := models.UserReq{}
 	err := c.BindJSON(&req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	err = validate.Struct(req)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
