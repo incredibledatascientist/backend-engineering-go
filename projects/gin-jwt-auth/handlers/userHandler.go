@@ -1,26 +1,17 @@
 package handlers
 
 import (
-	"context"
-	"fmt"
+	"net/http"
+	"strconv"
+
 	"gin-jwt-auth/database"
 	"gin-jwt-auth/models"
-	"net/http"
-	"time"
+	"gin-jwt-auth/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
-	"github.com/golang-jwt/jwt/v4"
-	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 )
 
-// func HashPassword(password string) {
-
-// }
-// func VerifyPassword()
-
-var JWT_SECRET = "master@golang"
 var validate = validator.New()
 
 func UserSignup(c *gin.Context) {
@@ -31,29 +22,57 @@ func UserSignup(c *gin.Context) {
 		return
 	}
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), 10)
+	err = validate.Struct(req)
 	if err != nil {
-		c.JSON(http.StatusBadRequest,
-			gin.H{"error": fmt.Errorf("invalid requests")})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	hash, err := utils.HashPassword(req.Password)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
 		return
 	}
 
 	db := database.GetDB()
 
+	// Check if user exists
+	var count int64
+	db.Model(&models.User{}).Where("username = ?", req.Username).Count(&count)
+	if count > 0 {
+		c.JSON(http.StatusConflict, gin.H{"error": "Username already exists"})
+		return
+	}
+
 	// Create user
 	user := models.User{
 		Username: req.Username,
 		Password: string(hash),
+		Role:     models.RoleUser, // Assign default role
 	}
 
 	result := db.Create(&user)
 	if result.Error != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": result.Error.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
 		return
 	}
 
-	fmt.Println("user:", user)
-	c.JSON(http.StatusOK, gin.H{"message": "user created", "user": user})
+	userIdStr := strconv.Itoa(int(user.ID))
+	accessToken, refreshToken := utils.GenerateAuthTokens(userIdStr, user.Username, strconv.Itoa(int(user.Role)))
+
+	user.AccessToken = accessToken
+	user.RefreshToken = refreshToken
+	db.Save(&user)
+
+	c.JSON(http.StatusCreated, gin.H{
+		"message": "User created successfully",
+		"user": gin.H{
+			"id":       user.ID,
+			"username": user.Username,
+		},
+		"access_token":  accessToken,
+		"refresh_token": refreshToken,
+	})
 }
 
 func UserLogin(c *gin.Context) {
@@ -71,64 +90,57 @@ func UserLogin(c *gin.Context) {
 	}
 
 	db := database.GetDB()
-
-	ctx := context.Background()
-	user, err := gorm.G[models.User](db).Where("username = ?", req.Username).First(ctx)
+	var user models.User
+	err = db.Where("username = ?", req.Username).First(&user).Error
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid username or password"})
 		return
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "password not matched"})
+	isValid, _ := utils.VerifyPassword(user.Password, req.Password)
+	if !isValid {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid username or password"})
 		return
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id":     user.ID,
-		"expiry_time": time.Now().Add(5 * time.Minute).Unix(),
-	})
+	userIdStr := strconv.Itoa(int(user.ID))
+	accessToken, refreshToken := utils.GenerateAuthTokens(userIdStr, user.Username, strconv.Itoa(int(user.Role)))
 
-	// Sign and get the complete encoded token as a string using the secret
-	tokenString, err := token.SignedString([]byte(JWT_SECRET))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
+	user.AccessToken = accessToken
+	user.RefreshToken = refreshToken
+	db.Save(&user) // update tokens in db
 
-	// Set cookies
+	// Set cookies for security alternative
 	c.SetSameSite(http.SameSiteLaxMode)
-	c.SetCookie("Authorization", tokenString, 10*60, "", "", false, true)
+	c.SetCookie("Authorization", accessToken, 15*60, "", "", false, true)
 
-	c.JSON(http.StatusOK, gin.H{"access_token": tokenString})
+	c.JSON(http.StatusOK, gin.H{
+		"message":       "Login successful",
+		"access_token":  accessToken,
+		"refresh_token": refreshToken,
+	})
 }
 
 func GetUsers(c *gin.Context) {
-	fmt.Println("----- get user:")
 	db := database.GetDB()
-	ctx := context.Background()
-	users, err := gorm.G[models.User](db).Find(ctx)
+	var users []models.User
+	err := db.Find(&users).Error
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch users"})
 		return
 	}
 
+	// Filter out sensitive data here in a real app or use a response struct
 	c.JSON(http.StatusOK, gin.H{"users": users})
 }
 
 func GetUser(id uint) (*models.User, error) {
 	db := database.GetDB()
-	ctx := context.Background()
-	user, err := gorm.G[models.User](db).Where("id = ?", id).First(ctx)
+	var user models.User
+	err := db.Where("id = ?", id).First(&user).Error
 	if err != nil {
 		return nil, err
 	}
 
 	return &user, nil
-
 }
-
-// func GetUser(c *gin.Context) {
-
-// }

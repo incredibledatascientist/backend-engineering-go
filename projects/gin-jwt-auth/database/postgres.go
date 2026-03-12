@@ -75,19 +75,9 @@ func NewPostgresDB(cfg Config) (*gorm.DB, error) {
 }
 
 func InitDatabase() (*gorm.DB, error) {
-	postgres := PostgresConfig{
-		Name:     "ginjwtauth",
-		Port:     5432,
-		Host:     "localhost",
-		User:     "postgres",
-		Password: "infierms",
-		TimeZone: "Asia/Kolkata",
-		SSLMode:  "disable",
-	}
+	cfg := LoadConfig()
 
-	db, err := NewPostgresDB(Config{
-		Postgres: postgres,
-	})
+	db, err := NewPostgresDB(cfg)
 
 	if err != nil {
 		return nil, err
