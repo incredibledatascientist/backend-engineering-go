@@ -18,6 +18,11 @@ type PostgresConfig struct {
 	SSLMode  string `yaml:"ssl_mode"`
 }
 
+// Neon DB Postgres configuration
+type NeonDB struct {
+	ConnString string
+}
+
 // Application configuration
 type Config struct {
 	// Env      string         `yaml:"env"`
@@ -75,14 +80,26 @@ func NewPostgresDB(cfg Config) (*gorm.DB, error) {
 }
 
 func InitDatabase() (*gorm.DB, error) {
+	// postgres := PostgresConfig{
+	// 	Name:     "ginjwtauth",
+	// 	Port:     5432,
+	// 	Host:     "localhost",
+	// 	User:     "postgres",
+	// 	Password: "infierms",
+	// 	TimeZone: "Asia/Kolkata",
+	// 	SSLMode:  "disable",
+	// }
+
+	// Neon DB configs
+	// neonDB := "postgresql://user:password@host/dbname?sslmode=require&channel_binding=require"
 	postgres := PostgresConfig{
-		Name:     "ginjwtauth",
+		Name:     "neondb",
 		Port:     5432,
-		Host:     "localhost",
-		User:     "postgres",
-		Password: "infierms",
+		Host:     "ep-wispy-heart-ams3cs64-pooler.c-5.us-east-1.aws.neon.tech",
+		User:     "neondb_owner",
+		Password: "npg_xAHyU0X6aMLI",
 		TimeZone: "Asia/Kolkata",
-		SSLMode:  "disable",
+		SSLMode:  "require",
 	}
 
 	db, err := NewPostgresDB(Config{

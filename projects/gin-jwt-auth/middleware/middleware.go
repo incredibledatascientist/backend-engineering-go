@@ -13,7 +13,6 @@ import (
 var JWT_SECRET = "master@golang"
 
 func Authenticate(c *gin.Context) {
-	fmt.Println("------------- middleware start ----------")
 	tokenString, err := c.Cookie("Authorization")
 
 	if err != nil {
@@ -52,15 +51,14 @@ func Authenticate(c *gin.Context) {
 
 		c.Set("user", user)
 
-		// if float64(currTime) > expTime {
-		// 	c.AbortWithStatus(http.StatusUnauthorized)
-		// 	return
-		// }
+		if float64(currTime) > expTime {
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
 
 	} else {
 		fmt.Println(err)
 	}
 
 	c.Next()
-	fmt.Println("------------- middleware ----------")
 }
