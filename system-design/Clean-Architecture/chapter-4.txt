@@ -1,0 +1,156 @@
+FUNCTIONAL DECOMPOSITION – SUMMARY
+Clean Architecture – Chapter 4 (Structured Programming)
+
+1. WHAT IS FUNCTIONAL DECOMPOSITION
+
+Functional decomposition is the process of breaking a large and complex
+problem into smaller, manageable functions.
+
+Instead of solving the entire problem in one large block of code,
+the system is divided into smaller tasks where each function performs
+a specific responsibility.
+
+Each function handles one small piece of the overall logic.
+
+Key idea:
+
+Break large problems into smaller functions that are easier to
+understand, test, and maintain.
+
+
+2. WHY FUNCTIONAL DECOMPOSITION IS IMPORTANT
+
+Large programs become difficult to manage if all logic is written
+in one place.
+
+Without decomposition, code becomes:
+
+• hard to understand
+• hard to debug
+• hard to test
+• hard to maintain
+
+Functional decomposition helps control complexity by organizing
+software into smaller logical steps.
+
+
+3. HOW FUNCTIONAL DECOMPOSITION WORKS
+
+The process usually follows these steps:
+
+Step 1 – Identify the main task.
+
+Example:
+CreateOrder
+
+Step 2 – Break the task into smaller subtasks.
+
+CreateOrder
+ ├─ ValidateUser
+ ├─ ValidateCart
+ ├─ CalculateTotal
+ ├─ ProcessPayment
+ ├─ SaveOrder
+ └─ SendConfirmation
+
+Step 3 – Break complex subtasks further if necessary.
+
+ProcessPayment
+ ├─ ValidateCard
+ ├─ ChargeCard
+ └─ RecordTransaction
+
+This creates a hierarchical structure of functions.
+
+
+4. REAL SOFTWARE EXAMPLE
+
+Example: Order processing system
+
+Main function:
+
+CreateOrder()
+
+Decomposed structure:
+
+CreateOrder
+ ├─ validateUser()
+ ├─ validateCart()
+ ├─ calculateTotal()
+ ├─ processPayment()
+ ├─ saveOrder()
+ └─ sendConfirmationEmail()
+
+Each function handles a specific responsibility within the workflow.
+
+
+5. BENEFITS OF FUNCTIONAL DECOMPOSITION
+
+Functional decomposition provides several advantages:
+
+1. Better readability
+   Programs become easier to understand because each function
+   represents a clear step in the workflow.
+
+2. Easier testing
+   Individual functions can be tested independently.
+
+3. Better maintainability
+   Changes in one function do not affect unrelated parts of the system.
+
+4. Code reuse
+   Small functions can be reused in different parts of the system.
+
+5. Reduced complexity
+   Complex systems become easier to manage by dividing them into
+   smaller logical components.
+
+
+6. WHERE FUNCTIONAL DECOMPOSITION IS USED
+
+Functional decomposition is widely used in many areas of software
+development, including:
+
+• backend APIs
+• data processing systems
+• algorithms
+• system design
+• microservices and modular architectures
+
+Example backend API decomposition:
+
+CreateUser
+ ├─ validateInput()
+ ├─ hashPassword()
+ ├─ saveUser()
+ └─ sendWelcomeEmail()
+
+
+7. RULE OF GOOD FUNCTIONAL DECOMPOSITION
+
+A well-designed function should follow a simple rule:
+
+Each function should perform one clear task.
+
+Bad example:
+
+CreateUserAndSendEmailAndLogAnalytics()
+
+Better design:
+
+CreateUser()
+SendEmail()
+LogAnalytics()
+
+
+FINAL IDEA
+
+Functional decomposition is a core technique in structured
+programming that helps developers manage complexity by dividing
+large problems into smaller, well-defined functions.
+
+FINAL ONE-SENTENCE SUMMARY
+
+Functional decomposition is the practice of breaking complex
+programs into smaller functions where each function performs
+a single, well-defined task.
